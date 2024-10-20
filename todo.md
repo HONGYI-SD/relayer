@@ -1,0 +1,6 @@
+- 新增一张表 bridgetx, 记录跨链交易信息、proof
+- relayer 扫描L2 slot，过滤出所有的bridge tx, 交易存入bridgetx
+- 检查rootmgr合约，查询slot->root情况
+- 如果rootmgr有更新，本地计算本地merkle tree root, root校验
+- 生成proof并持久化存储
+- 支持proof 查询
