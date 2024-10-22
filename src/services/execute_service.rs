@@ -22,6 +22,7 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Signature;
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
+use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 pub struct ExecuteService {
@@ -111,7 +112,6 @@ impl ExecuteService {
         let mut repo = TransactionRepo { one: &mut self.client_one };
 
         let rows = repo.range(from_slot, to_slot)?;
-
         Ok(rows)
     }
 
@@ -278,6 +278,42 @@ impl ExecuteService {
         });
 
         kvs
+    }
+
+    pub fn filter_bridge_tx(&mut self, start_slot: i64, end_slot: i64) -> Result<Vec<TransactionRow>, NodeError> {
+        if end_slot < start_slot {
+            error!("end_slot should greater than or equal start_slot  start_slot: {:?},end_slot: {:?}",
+                start_slot,end_slot);
+            return Err(
+                NodeError::new(generate_uuid(),
+                               format!("end_slot should greater than or equal start_slot  start_slot: {:?},end_slot: {:?}",
+                                       start_slot, end_slot),
+                )
+            );
+        }
+
+        if start_slot < self.initial_slot as i64 || end_slot < self.initial_slot as i64 {
+            error!("start_slot and end_slot should greater than initial_slot  start_slot: {:?}, end_slot: {:?}, initial_slot: {:?}",
+                start_slot,end_slot,self.initial_slot);
+            return Err(
+                NodeError::new(generate_uuid(),
+                               format!("start_slot and end_slot should greater than initial_slot  start_slot: {:?}, end_slot: {:?}, initial_slot: {:?}",
+                                       start_slot, end_slot, self.initial_slot),
+                )
+            );
+        }
+
+        let transactions = self.get_transactions(start_slot, end_slot)?;
+        let mut bridge_txs: Vec<&TransactionRow> = Vec::new();
+
+        for transaction in transactions.clone() {
+            let msg = transaction.legacy_message.unwrap();
+            let pks: Vec<Pubkey> = msg.account_keys.iter().map(|ak| Pubkey::try_from(ak.as_slice()).unwrap()).collect();
+            if pks.contains(&Pubkey::from_str("").unwrap()) {
+                bridge_txs.push(&transaction);
+            }
+        }
+        Ok(bridge_txs)
     }
 }
 
