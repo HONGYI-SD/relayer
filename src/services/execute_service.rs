@@ -4,8 +4,10 @@ use crate::contract::chain_brief::ChainBrief;
 use crate::models::account_audit_row::AccountAuditRow;
 use crate::models::brief_model::convert_chain_briefs_to_brief_records;
 use crate::models::transaction_model::TransactionRow;
+use crate::models::bridge_transaction_model::BridgeTxRecord;
 use crate::repositories::account_audit_repo::AccountAuditRepo;
 use crate::repositories::block_repo::BlockRepo;
+use crate::repositories::bridge_tx_repo::BridgeTxRepo;
 use crate::repositories::brief_repo::BriefRepo;
 use crate::repositories::chain_repo::ChainRepo;
 use crate::repositories::transaction_repo::TransactionRepo;
@@ -280,7 +282,7 @@ impl ExecuteService {
         kvs
     }
 
-    pub fn filter_bridge_tx(&mut self, start_slot: i64, end_slot: i64) -> Result<Vec<TransactionRow>, NodeError> {
+    pub fn filter_bridge_tx(&mut self, start_slot: i64, end_slot: i64) -> Result<Vec<BridgeTxRecord>, NodeError> {
         if end_slot < start_slot {
             error!("end_slot should greater than or equal start_slot  start_slot: {:?},end_slot: {:?}",
                 start_slot,end_slot);
@@ -304,16 +306,25 @@ impl ExecuteService {
         }
 
         let transactions = self.get_transactions(start_slot, end_slot)?;
-        let mut bridge_txs: Vec<&TransactionRow> = Vec::new();
+        let mut bridge_txs: Vec<BridgeTxRecord> = Vec::new();
 
         for transaction in transactions.clone() {
-            let msg = transaction.legacy_message.unwrap();
+            let msg = transaction.clone().legacy_message.unwrap();
             let pks: Vec<Pubkey> = msg.account_keys.iter().map(|ak| Pubkey::try_from(ak.as_slice()).unwrap()).collect();
             if pks.contains(&Pubkey::from_str("").unwrap()) {
-                bridge_txs.push(&transaction);
+                bridge_txs.push(BridgeTxRecord::from(transaction));
             }
         }
         Ok(bridge_txs)
+    }
+
+    pub fn insert_bridge_txs(&self, bridge_txs: Vec<BridgeTxRecord>) -> Result<u32, NodeError> {
+        let repo = BridgeTxRepo{pool: Box::from(self.client_pool.to_owned())};
+
+        let rows = repo.insert(bridge_txs)?;
+        let count = rows.len() as u32;
+
+        Ok(count)
     }
 }
 

@@ -14,6 +14,7 @@ use solana_sdk::signature::{Keypair, Signer};
 use crate::common::node_configs::{ChainConfiguration, StoreConfiguration};
 use crate::common::node_error::NodeError;
 use crate::contract::chain_brief::ChainBrief;
+use crate::models::bridge_transaction_model::BridgeTxRecord;
 use crate::services::chain_basic_service::ChainBasicService;
 use crate::services::chain_brief_service::ChainBriefService;
 use crate::services::chain_service::ChainService;
@@ -127,7 +128,7 @@ impl Simulator {
             return is_success.clone();
         }
 
-        let handle = thread::spawn(|| {
+        let _handle = thread::spawn(|| {
             // todo 1: read rootMgr program, get latest slot->root
             // todo 2: select bridge tx from db
             // todo 3: reorgin MT
@@ -148,22 +149,28 @@ impl Simulator {
 
             let start_slot = std::cmp::max(last_slot + 1, initial_slot);
             let end_slot = max_slot - 1;
-            let briefs: Vec<ChainBrief> = execute_service.generate_briefs(start_slot.clone(), end_slot.clone()).unwrap();
-            // todo 1: filter bridge tx
 
-            // send brief to chain
-            // The slot 0 and slot 1 are initial of blockchain, we never challenge, so skip them.
-            for brief in briefs {
-                info!("brief: {:?}", brief);
-                is_success = chain_service.create_brief_account(brief.clone());
-                if !is_success {
-                    error!("create brief account fail. slot: {:?}", brief.clone());
-                    continue;
-                }
+            let bridge_txs: Vec<BridgeTxRecord> = execute_service.filter_bridge_tx(start_slot.clone(), end_slot.clone()).unwrap();
+            if !bridge_txs.is_empty() {
+                let count = execute_service.insert_bridge_txs(bridge_txs).unwrap();
+                info!("insert {:?} bridge txs into pgdb", count);
             }
+            
+
+            // let briefs: Vec<ChainBrief> = execute_service.generate_briefs(start_slot.clone(), end_slot.clone()).unwrap();
+
+            // // send brief to chain
+            // // The slot 0 and slot 1 are initial of blockchain, we never challenge, so skip them.
+            // for brief in briefs {
+            //     info!("brief: {:?}", brief);
+            //     is_success = chain_service.create_brief_account(brief.clone());
+            //     if !is_success {
+            //         error!("create brief account fail. slot: {:?}", brief.clone());
+            //         continue;
+            //     }
+            // }
         }
         
-        handle.join().unwrap();
     }
 }
 
