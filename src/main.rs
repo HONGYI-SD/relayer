@@ -1,6 +1,10 @@
+use std::thread;
+
 use log::{error, info};
 use relayer::common::node_configs::NodeConfiguration;
-use relayer::simulator::Simulator;
+use relayer::monitor::Monitor;
+use relayer::services::chain_service::ChainService;
+use relayer::filter::Filter;
 use relayer::utils::log_util::{init_logger, LogOutput};
 
 use clap::{App, Arg};
@@ -49,11 +53,17 @@ fn main() {
         Ok(cfg) => {
             let store = cfg.store.clone();
             let chain = cfg.chain.clone();
-
-            let mut simulator = Simulator::new()
+            let chain2 = chain.clone();
+            let _ = thread::spawn(move || {
+                let mut monitor = Monitor::new()
+                .load_chain_config(&chain2)
+                .connect_chain();
+                monitor.run();
+            });
+            let mut filter = Filter::new()
                 .store(&store)
-                .chain(&chain);
-            simulator.start();
+                .chain(&chain); //todo del chain
+            filter.start();
         }
     }
 }

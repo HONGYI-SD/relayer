@@ -25,7 +25,7 @@ use crate::utils::store_util::{create_one, create_pool, PgConnectionPool};
 use crate::utils::time_util;
 use crate::utils::uuid_util::generate_uuid;
 
-pub struct Simulator {
+pub struct Filter {
     execute_service: Option<ExecuteService>,
     chain_service: Option<ChainService>,
     store_config: Option<StoreConfiguration>,
@@ -33,7 +33,7 @@ pub struct Simulator {
 }
 
 
-impl Simulator {
+impl Filter {
     pub fn new() -> Self {
         Self {
             execute_service: None,
@@ -62,13 +62,9 @@ impl Simulator {
             error!("{:?}", e);
         };
 
+        //self.deal_bridge_tx();
 
-        let is_success = self.start_submit_brief();
-        if is_success {
-            info!("submit brief success.");
-        } else {
-            error!("submit brief fail.");
-        }
+        self.start_submit_brief();
     }
 
 
@@ -110,10 +106,19 @@ impl Simulator {
         Ok(())
     }
 
-    pub fn start_submit_brief(&mut self) -> bool {
-        let mut is_success: bool = true;
+    // pub fn deal_bridge_tx(&self) {
+    //     let _handle = thread::spawn(|| {
+    //         // todo 1: read rootMgr program, get latest slot->root
+    //         let chain_service = self.chain_service.unwrap();
+    //         // todo 2: select bridge tx from db
+    //         // todo 3: reorgin MT
+    //         // todo 4： generate proof
+    //     });
+    // }
 
-        let execute_service = self.execute_service.as_mut().unwrap();
+    pub fn start_submit_brief(&mut self) {
+        /*
+
         let chain_service = self.chain_service.as_mut().unwrap();
 
         is_success = chain_service.create_state_account();
@@ -128,13 +133,10 @@ impl Simulator {
             return is_success.clone();
         }
 
-        let _handle = thread::spawn(|| {
-            // todo 1: read rootMgr program, get latest slot->root
-            // todo 2: select bridge tx from db
-            // todo 3: reorgin MT
-            // todo 4： generate proof
-        });
+        */
 
+        //let mut is_success: bool = true;
+        let execute_service = self.execute_service.as_mut().unwrap();
         loop {
             // 获取最后处理的区块高度
             let last_slot = execute_service.get_last_slot().unwrap();
