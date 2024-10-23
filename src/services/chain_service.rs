@@ -14,6 +14,8 @@ use crate::services::chain_brief_service::ChainBriefService;
 use crate::services::chain_state_service::ChainStateService;
 use crate::services::chain_tally_service::ChainTallyService;
 
+use super::chain_root_mgr_service::{self, ChainRootMgrService, RootsInfo};
+
 pub struct ChainService {
     rpc_client: RpcClient,
     chain_config: ChainConfiguration,
@@ -155,6 +157,31 @@ impl ChainService {
         }
 
         return is_success.clone();
+    }
+
+    pub fn get_latest_slot(&mut self) -> Option<u64> {
+        let root_mgr_program_id_binding = Pubkey::from_str("todo root mgr program id");
+        let root_mgr_program_id = root_mgr_program_id_binding.as_ref().unwrap();
+        let chain_root_mgr_service = ChainRootMgrService{
+            rpc_client: &self.rpc_client,
+            program_id: root_mgr_program_id,
+        };
+
+        let all_slots = chain_root_mgr_service.fetch_all_slots()?;
+        if all_slots.len() != 0 {
+            return Some(all_slots[all_slots.len()-1]);
+        }
+        None
+    }
+
+    pub fn get_roots_info_by_slot(&mut self, slot: u64) -> Option<RootsInfo> {
+        let root_mgr_program_id_binding = Pubkey::from_str("todo root mgr program id");
+        let root_mgr_program_id = root_mgr_program_id_binding.as_ref().unwrap();
+        let chain_root_mgr_service = ChainRootMgrService{
+            rpc_client: &self.rpc_client,
+            program_id: root_mgr_program_id,
+        };
+        chain_root_mgr_service.fetch_roots_by_slot(slot)
     }
 }
 
