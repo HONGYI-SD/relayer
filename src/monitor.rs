@@ -1,4 +1,3 @@
-use itertools::chain;
 use log::{error, info};
 use dd_merkle_tree::{MerkleTree, HashingAlgorithm};
 use crate::{common::{node_configs::{ChainConfiguration, StoreConfiguration}, node_error::NodeError}, services::{chain_service::ChainService, execute_service::ExecuteService}, utils::{time_util, uuid_util::generate_uuid}};
@@ -89,7 +88,7 @@ impl Monitor {
                 error!("local merkle tree is different to the tree on chain");
                 break Err(NodeError::new(generate_uuid(), "local merkle tree is different to the tree on chain".to_string()));
             }
-            
+
             let _ = bridge_txs.iter_mut().map(| bt| {
                 let proof = local_tree.merkle_proof_hash(hex::decode(bt.clone().tx_hash).unwrap()).unwrap();
                 bt.proof = hex::encode(proof.get_pairing_hashes());

@@ -54,15 +54,18 @@ fn main() {
             let chain = cfg.chain.clone();
             let monitor_store = store.clone();
             let monitor_chain = chain.clone();
+            
             let _ = thread::spawn(move || {
                 let mut monitor = Monitor::new()
-                .load_chain_config(&monitor_chain)
-                .load_store_config(&monitor_store);
-            let _ = monitor.start();
+                    .load_chain_config(&monitor_chain)
+                    .load_store_config(&monitor_store);
+
+                let _ = monitor.start();
             });
+
             let mut filter = Filter::new()
-                .store(&store)
-                .chain(&chain); //todo del chain
+                .store(&store);
+
             filter.start();
         }
     }
