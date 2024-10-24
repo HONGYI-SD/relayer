@@ -3,7 +3,6 @@ use std::thread;
 use log::{error, info};
 use relayer::common::node_configs::NodeConfiguration;
 use relayer::monitor::Monitor;
-use relayer::services::chain_service::ChainService;
 use relayer::filter::Filter;
 use relayer::utils::log_util::{init_logger, LogOutput};
 
@@ -59,7 +58,7 @@ fn main() {
                 let mut monitor = Monitor::new()
                 .load_chain_config(&monitor_chain)
                 .load_store_config(&monitor_store);
-                monitor.start();
+            let _ = monitor.start();
             });
             let mut filter = Filter::new()
                 .store(&store)
