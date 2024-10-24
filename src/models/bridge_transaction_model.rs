@@ -79,3 +79,15 @@ impl From<TransactionRow> for BridgeTxRecord {
         }
     }
 }
+
+impl From<BridgeTxRow> for BridgeTxRecord {
+    fn from(btr: BridgeTxRow) -> Self {
+        BridgeTxRecord { 
+            slot: btr.slot, 
+            signature: "todo signature".to_string(), // todo 
+            tx_hash: "todo tx hash".to_string(), // todo 
+            proof: "todo tx proof".to_string()  // todo
+        }
+    }
+    
+}

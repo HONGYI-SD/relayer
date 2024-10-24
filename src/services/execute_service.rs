@@ -4,7 +4,7 @@ use crate::contract::chain_brief::ChainBrief;
 use crate::models::account_audit_row::AccountAuditRow;
 use crate::models::brief_model::convert_chain_briefs_to_brief_records;
 use crate::models::transaction_model::TransactionRow;
-use crate::models::bridge_transaction_model::BridgeTxRecord;
+use crate::models::bridge_transaction_model::{BridgeTxRecord, BridgeTxRow};
 use crate::repositories::account_audit_repo::AccountAuditRepo;
 use crate::repositories::block_repo::BlockRepo;
 use crate::repositories::bridge_tx_repo::BridgeTxRepo;
@@ -31,6 +31,7 @@ pub struct ExecuteService {
     client_pool: PgConnectionPool,
     client_one: Client,
     rocksdb: Arc<RwLock<DB>>,
+    monitor_rocksdb_slot: Arc<RwLock<DB>>,
     database_store_account_smt: Arc<RwLock<DatabaseStoreAccountSMT>>,
     memory_store_account_smt: Arc<RwLock<MemoryStoreAccountSMT>>,
     initial_slot: u64,
@@ -45,12 +46,15 @@ impl ExecuteService {
 
         let one = create_one(config.to_owned());
 
-        let account_dir = Path::new("./fp-smt/account");
+        let account_dir = Path::new("./relayer/account");
         let account_db = DB::open_default(account_dir).unwrap();
         let rocksdb_store = RocksStore::new(account_db);
-        let slot_dir = Path::new("./fp-smt/slot");
+        let slot_dir = Path::new("./relayer/slot");
         let slot_db = DB::open_default(slot_dir).unwrap();
         let rocksdb = Arc::new(RwLock::new(slot_db));
+        let monitor_slot_dir = Path::new("./relayer/monitor-slot");
+        let monitor_slot_db = DB::open_default(monitor_slot_dir).unwrap();
+        let monitor_rocksdb_slot = Arc::new(RwLock::new(monitor_slot_db));
         let database_store_account_sparse_merkle_tree = DatabaseStoreAccountSMT::new_with_store(rocksdb_store).unwrap();
         let db_smt = Arc::new(RwLock::new(database_store_account_sparse_merkle_tree));
         let memory_store_account_sparse_merkle_tree = MemoryStoreAccountSMT::new_with_store(Default::default()).unwrap();
@@ -62,6 +66,7 @@ impl ExecuteService {
             client_pool: pool,
             client_one: one,
             rocksdb,
+            monitor_rocksdb_slot,
             database_store_account_smt: db_smt,
             memory_store_account_smt: mm_smt,
             // The slot 0 and slot 1 are initial of blockchain, skip them.
@@ -127,6 +132,20 @@ impl ExecuteService {
         let slot = repo.show().unwrap_or(0);
 
         Ok(slot)
+    }
+
+    pub fn get_last_slot_for_monitor(&self) -> Result<i64, NodeError> {
+        let mut repo = ChainRepo{ db: &self.monitor_rocksdb_slot };
+
+        let slot = repo.show().unwrap_or(0);
+        
+        Ok(slot)
+    }
+
+    pub fn update_last_slot_for_monitor(&self, slot: i64) {
+        let mut repo = ChainRepo { db: &self.monitor_rocksdb_slot };
+
+        repo.upsert(slot);
     }
 
     pub fn get_max_slot(&mut self) -> Result<i64, NodeError> {
@@ -325,6 +344,31 @@ impl ExecuteService {
         let count = rows.len() as u32;
 
         Ok(count)
+    }
+
+    pub fn brige_txs_hashes(&self, from_slot: i64, to_slot: i64) -> Result<Vec<String>, NodeError> {
+        let repo = BridgeTxRepo{pool: Box::from(self.client_pool.to_owned())};
+
+        repo.bridge_tx_hashes(from_slot, to_slot)
+    }
+
+    pub fn bridge_tx_range(&self, from_slot: i64, to_slot: i64) -> Result<Vec<BridgeTxRecord>, NodeError>{
+        let repo = BridgeTxRepo{pool: Box::from(self.client_pool.to_owned())};
+
+        let bridge_tx_rows = repo.range(from_slot, to_slot).unwrap();
+
+        let bridge_tx_records = bridge_tx_rows.into_iter().map(BridgeTxRecord::from).collect();
+        
+        Ok(bridge_tx_records)
+
+    }
+
+    pub fn bridge_tx_update(&self, brige_tx_record: BridgeTxRecord) -> Result<BridgeTxRow, NodeError>{
+        let repo = BridgeTxRepo{pool: Box::from(self.client_pool.to_owned())};
+
+        let row = repo.update(brige_tx_record).unwrap();
+        
+        Ok(row)
     }
 }
 

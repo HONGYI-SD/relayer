@@ -54,6 +54,7 @@ postgres = { version = "0.19.8", features = ["with-chrono-0_4"] }
 postgres-types = { version = "0.2.7", features = ["derive"] }
 sparse-merkle-tree = { git = "https://github.com/MultiAdaptive/sparse-merkle-tree.git", branch = "main", commit = "1c53fd1bb27d8649ce1f2260af6fa43f7aee7436" }
 verify-smt = { git = "https://github.com/MultiAdaptive/verify-smt.git", branch = "main", commit = "c0bd009399e5b2dc6cae0e9a3a4500515dc87588" }
+dd-merkle-tree = "0.1.0"
 
 [dev-dependencies]
 assert_cmd = "2.0"

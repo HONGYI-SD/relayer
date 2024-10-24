@@ -1,4 +1,5 @@
 use crate::common::node_error::NodeError;
+use crate::entities::account_audit_entity::table_account_audit::column_write_version;
 use crate::entities::bridge_transaction_entity::table_bridge_transaction::column_slot;
 use crate::entities::bridge_transaction_entity::table_bridge_transaction::dsl::table_bridge_transaction;
 use crate::models::bridge_transaction_model::{BridgeTxRecord, BridgeTxRow};
@@ -63,4 +64,22 @@ impl BridgeTxRepo {
         Ok(updated_row)
     }
     
+    pub fn range(&self, from_slot: i64, to_slot: i64) -> Result<Vec<BridgeTxRow>, NodeError> {
+        let conn: &mut PooledPgConnection = &mut self.pool.get()?;
+
+        let rows = table_bridge_transaction
+            .filter(column_slot.ge(from_slot).and(column_slot.le(to_slot)))
+            .order(column_slot.asc())
+            .load::<BridgeTxRow>(conn)
+            .expect("Error loading bridge_tx");
+
+        Ok(rows)
+    }
+
+    pub fn bridge_tx_hashes(&self, from_slot: i64, to_slot: i64) -> Result<Vec<String>, NodeError> {
+        let bridge_txs = self.range(from_slot, to_slot).unwrap();
+        let hashes = bridge_txs.into_iter().map(|t| {t.tx_hash}).collect();
+        
+        Ok(hashes)
+    }
 }
