@@ -1,12 +1,13 @@
 use log::{error, info};
 use dd_merkle_tree::{MerkleTree, HashingAlgorithm};
-use crate::{common::{node_configs::{ChainConfiguration, StoreConfiguration}, node_error::NodeError}, services::{chain_service::ChainService, execute_service::ExecuteService}, utils::{time_util, uuid_util::generate_uuid}};
+use crate::{common::{node_configs::{ChainConfiguration, ContractConfiguration, StoreConfiguration}, node_error::NodeError}, services::{chain_service::ChainService, execute_service::ExecuteService}, utils::{time_util, uuid_util::generate_uuid}};
 
 pub struct Monitor {
     execute_service: Option<ExecuteService>,
     chain_service: Option<ChainService>,
     store_config: Option<StoreConfiguration>,
     chain_config: Option<ChainConfiguration>,
+    contract_config: Option<ContractConfiguration>,
     local_tree: Option<MerkleTree>,
 }
 
@@ -17,6 +18,7 @@ impl Monitor {
             chain_service: None, 
             store_config: None,
             chain_config: None,
+            contract_config: None,
             local_tree: None,
          }
     }
@@ -31,8 +33,14 @@ impl Monitor {
         self
     }
 
+    pub fn load_contract_config(mut self, conctract_config: &ContractConfiguration) -> Self {
+        self.contract_config = Some(conctract_config.clone());
+
+        self
+    }
+
     pub fn connect_execute(&mut self) -> Result<(), NodeError> {
-        let execute_service = ExecuteService::new(&self.store_config.clone().unwrap())?;
+        let execute_service = ExecuteService::new(&self.store_config.clone().unwrap(), &self.contract_config.clone().unwrap())?;
         
         self.execute_service = Some(execute_service);
 

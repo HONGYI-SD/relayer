@@ -1,4 +1,4 @@
-use crate::common::node_configs::StoreConfiguration;
+use crate::common::node_configs::{ContractConfiguration, StoreConfiguration};
 use crate::common::node_error::NodeError;
 use crate::contract::chain_brief::ChainBrief;
 use crate::models::account_audit_row::AccountAuditRow;
@@ -30,6 +30,7 @@ use std::sync::{Arc, RwLock};
 pub struct ExecuteService {
     client_pool: PgConnectionPool,
     client_one: Client,
+    l2_msg_program_id: String,
     rocksdb: Arc<RwLock<DB>>,
     monitor_rocksdb_slot: Arc<RwLock<DB>>,
     database_store_account_smt: Arc<RwLock<DatabaseStoreAccountSMT>>,
@@ -38,7 +39,7 @@ pub struct ExecuteService {
 }
 
 impl ExecuteService {
-    pub fn new(config: &StoreConfiguration) -> Result<Self, NodeError> {
+    pub fn new(config: &StoreConfiguration, contract: &ContractConfiguration) -> Result<Self, NodeError> {
         let pool = create_pool(
             config.to_owned(),
             10,
@@ -46,6 +47,7 @@ impl ExecuteService {
 
         let one = create_one(config.to_owned());
 
+        let l2_msg_program_id = contract.l2_message_program_id.clone();
         let account_dir = Path::new("./relayer/account");
         let account_db = DB::open_default(account_dir).unwrap();
         let rocksdb_store = RocksStore::new(account_db);
@@ -65,6 +67,7 @@ impl ExecuteService {
         Ok(Self {
             client_pool: pool,
             client_one: one,
+            l2_msg_program_id,
             rocksdb,
             monitor_rocksdb_slot,
             database_store_account_smt: db_smt,
@@ -330,10 +333,14 @@ impl ExecuteService {
         for transaction in transactions.clone() {
             let msg = transaction.clone().legacy_message.unwrap();
             let pks: Vec<Pubkey> = msg.account_keys.iter().map(|ak| Pubkey::try_from(ak.as_slice()).unwrap()).collect();
-            if pks.contains(&Pubkey::from_str("").unwrap()) {
+
+            if pks.contains(&Pubkey::from_str(&self.l2_msg_program_id).unwrap()) {
+                info!("push!!!!!");
                 bridge_txs.push(BridgeTxRecord::from(transaction));
             }
         }
+        
+        info!("tx len: {}", bridge_txs.len());
         Ok(bridge_txs)
     }
 

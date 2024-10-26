@@ -5,9 +5,12 @@ store:
   password: "1111"
   schema: "solana"
 
+contract:
+l2_message_program_id: "4yNGxshZTzeSv6ZLSBwNGfDfZyCEbxtmW4MvRWCEoAmy"
 
 chain:
   url: "http://127.0.0.1:8899"
   fraud_proof_native_program_id: "6S64JXB4z78FqzcyCVvFet6ueARooQta8aj7z69rAUfF"
   #  keypair base58 string
   execute_keypair: "4H6fCjc2vmbk9mLJmxXLQFcb4vkqL42T51gtfg95BGXdAAnAAX1kGj3Thq34m7gyd9NCbrUcp993FRCAgYbJmxWH"
+  l1_root_mgr_program_id: "8s5HysGMiK7eht7MBM7XMQeTuKr5sEyafYkscziHHS73"

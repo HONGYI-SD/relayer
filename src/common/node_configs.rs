@@ -5,8 +5,13 @@ use serde::{Deserialize, Serialize};
 pub struct NodeConfiguration {
     pub chain: ChainConfiguration,
     pub store: StoreConfiguration,
+    pub contract: ContractConfiguration,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ContractConfiguration {
+    pub l2_message_program_id: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChainConfiguration {
@@ -14,6 +19,7 @@ pub struct ChainConfiguration {
     pub fraud_proof_native_program_id: String,
     // keypair base58 string
     pub execute_keypair: String,
+    pub l1_root_mgr_program_id: String,
 }
 
 

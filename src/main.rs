@@ -52,19 +52,21 @@ fn main() {
         Ok(cfg) => {
             let store = cfg.store.clone();
             let chain = cfg.chain.clone();
-            let monitor_store = store.clone();
-            let monitor_chain = chain.clone();
-            
-            let _ = thread::spawn(move || {
-                let mut monitor = Monitor::new()
-                    .load_chain_config(&monitor_chain)
-                    .load_store_config(&monitor_store);
+            let contract = cfg.contract.clone();
+            // let monitor_store = store.clone();
+            // let monitor_chain = chain.clone();
 
-                let _ = monitor.start();
-            });
+            // let _ = thread::spawn(move || {
+            //     let mut monitor = Monitor::new()
+            //         .load_chain_config(&monitor_chain)
+            //         .load_store_config(&monitor_store);
+
+            //     let _ = monitor.start();
+            // });
 
             let mut filter = Filter::new()
-                .store(&store);
+                .store(&store)
+                .contract(&contract);
 
             filter.start();
         }
