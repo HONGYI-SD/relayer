@@ -61,10 +61,12 @@ impl Filter {
             let end_slot = max_slot - 1;
 
             let bridge_txs: Vec<BridgeTxRecord> = execute_service.filter_bridge_tx(start_slot.clone(), end_slot.clone()).unwrap();
+            
             if !bridge_txs.is_empty() {
                 let count = execute_service.insert_bridge_txs(bridge_txs).unwrap();
                 info!("insert {:?} bridge txs into pgdb", count);
             }
+            execute_service.update_last_slot(max_slot);
         }
     }
 }
