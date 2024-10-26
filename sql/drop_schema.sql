@@ -1,1 +1,1 @@
-DROP TABLE brief;
+DROP TABLE bridge_transaction;
