@@ -40,7 +40,7 @@ impl Monitor {
     }
 
     pub fn connect_execute(&mut self) -> Result<(), NodeError> {
-        let execute_service = ExecuteService::new(&self.store_config.clone().unwrap(), &self.contract_config.clone().unwrap())?;
+        let execute_service = ExecuteService::new(&self.store_config.clone().unwrap(), &self.contract_config.clone().unwrap(), false)?;
         
         self.execute_service = Some(execute_service);
 

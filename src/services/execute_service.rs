@@ -33,13 +33,13 @@ pub struct ExecuteService {
     l2_msg_program_id: String,
     rocksdb: Arc<RwLock<DB>>,
     monitor_rocksdb_slot: Arc<RwLock<DB>>,
-    database_store_account_smt: Arc<RwLock<DatabaseStoreAccountSMT>>,
-    memory_store_account_smt: Arc<RwLock<MemoryStoreAccountSMT>>,
+    //database_store_account_smt: Arc<RwLock<DatabaseStoreAccountSMT>>,
+    //memory_store_account_smt: Arc<RwLock<MemoryStoreAccountSMT>>,
     initial_slot: u64,
 }
 
 impl ExecuteService {
-    pub fn new(config: &StoreConfiguration, contract: &ContractConfiguration) -> Result<Self, NodeError> {
+    pub fn new(config: &StoreConfiguration, contract: &ContractConfiguration, is_filter: bool) -> Result<Self, NodeError> {
         let pool = create_pool(
             config.to_owned(),
             10,
@@ -48,67 +48,89 @@ impl ExecuteService {
         let one = create_one(config.to_owned());
 
         let l2_msg_program_id = contract.l2_message_program_id.clone();
-        let account_dir = Path::new("./relayer/account");
-        let account_db = DB::open_default(account_dir).unwrap();
-        let rocksdb_store = RocksStore::new(account_db);
-        let slot_dir = Path::new("./relayer/slot");
-        let slot_db = DB::open_default(slot_dir).unwrap();
-        let rocksdb = Arc::new(RwLock::new(slot_db));
-        let monitor_slot_dir = Path::new("./relayer/monitor-slot");
-        let monitor_slot_db = DB::open_default(monitor_slot_dir).unwrap();
-        let monitor_rocksdb_slot = Arc::new(RwLock::new(monitor_slot_db));
-        let database_store_account_sparse_merkle_tree = DatabaseStoreAccountSMT::new_with_store(rocksdb_store).unwrap();
-        let db_smt = Arc::new(RwLock::new(database_store_account_sparse_merkle_tree));
-        let memory_store_account_sparse_merkle_tree = MemoryStoreAccountSMT::new_with_store(Default::default()).unwrap();
-        let mm_smt = Arc::new(RwLock::new(memory_store_account_sparse_merkle_tree));
+        // let account_dir = Path::new("./relayer/account");
+        // let account_db = DB::open_default(account_dir).unwrap();
+        // let rocksdb_store = RocksStore::new(account_db);
+        if is_filter {
 
-        info!("Created PostgresClient.");
+            let slot_dir = Path::new("./relayer/slot");
+            let slot_db = DB::open_default(slot_dir).unwrap();
+            let rocksdb = Arc::new(RwLock::new(slot_db));
+            let monitor_slot_dir = Path::new("./relayer/monitor-slot-tmp");
+            let monitor_slot_db = DB::open_default(monitor_slot_dir).unwrap();
+            let monitor_rocksdb_slot = Arc::new(RwLock::new(monitor_slot_db));
+            info!("Created PostgresClient.");
 
-        Ok(Self {
-            client_pool: pool,
-            client_one: one,
-            l2_msg_program_id,
-            rocksdb,
-            monitor_rocksdb_slot,
-            database_store_account_smt: db_smt,
-            memory_store_account_smt: mm_smt,
-            // The slot 0 and slot 1 are initial of blockchain, skip them.
-            initial_slot: 2,
-        })
+            Ok(Self {
+                client_pool: pool,
+                client_one: one,
+                l2_msg_program_id,
+                rocksdb,
+                monitor_rocksdb_slot,
+                initial_slot: 2,
+            })
+        }else {
+            let slot_dir = Path::new("./relayer/slot-tmp");
+            let slot_db = DB::open_default(slot_dir).unwrap();
+            let rocksdb = Arc::new(RwLock::new(slot_db));
+
+            let monitor_slot_dir = Path::new("./relayer/monitor-slot");
+            let monitor_slot_db = DB::open_default(monitor_slot_dir).unwrap();
+            let monitor_rocksdb_slot = Arc::new(RwLock::new(monitor_slot_db));
+            info!("Created PostgresClient.");
+
+            Ok(Self {
+                client_pool: pool,
+                client_one: one,
+                l2_msg_program_id,
+                rocksdb,
+                monitor_rocksdb_slot,
+                initial_slot: 2,
+            })
+        }
+        
+
+        
+        //let database_store_account_sparse_merkle_tree = DatabaseStoreAccountSMT::new_with_store(rocksdb_store).unwrap();
+        //let db_smt = Arc::new(RwLock::new(database_store_account_sparse_merkle_tree));
+        //let memory_store_account_sparse_merkle_tree = MemoryStoreAccountSMT::new_with_store(Default::default()).unwrap();
+        //let mm_smt = Arc::new(RwLock::new(memory_store_account_sparse_merkle_tree));
+
+        
     }
 
-    pub fn check_smt(&mut self) -> Result<bool, NodeError> {
-        if self.database_store_account_smt.read().unwrap().is_empty() {
-            info!("database smt is empty.");
-            return Ok(true);
-        }
+    // pub fn check_smt(&mut self) -> Result<bool, NodeError> {
+    //     if self.database_store_account_smt.read().unwrap().is_empty() {
+    //         info!("database smt is empty.");
+    //         return Ok(true);
+    //     }
 
-        // 获取最后处理的区块高度
-        let last_slot = self.get_last_slot().unwrap_or(self.initial_slot as i64);
+    //     // 获取最后处理的区块高度
+    //     let last_slot = self.get_last_slot().unwrap_or(self.initial_slot as i64);
 
-        let start_slot = self.initial_slot as i64;
-        let end_slot = last_slot;
+    //     let start_slot = self.initial_slot as i64;
+    //     let end_slot = last_slot;
 
-        let account_audits = self.get_account_audits(start_slot, end_slot).unwrap();
+    //     let account_audits = self.get_account_audits(start_slot, end_slot).unwrap();
 
-        let kvs = self.convert(account_audits);
-        self.memory_store_account_smt.write().unwrap().update_all(kvs).unwrap();
+    //     let kvs = self.convert(account_audits);
+    //     self.memory_store_account_smt.write().unwrap().update_all(kvs).unwrap();
 
-        let database_store_account_smt_root = Hash::new(self.database_store_account_smt.read().unwrap().root().as_slice().clone()).to_string();
-        let memory_store_account_smt_root = Hash::new(self.memory_store_account_smt.read().unwrap().root().as_slice().clone()).to_string();
+    //     let database_store_account_smt_root = Hash::new(self.database_store_account_smt.read().unwrap().root().as_slice().clone()).to_string();
+    //     let memory_store_account_smt_root = Hash::new(self.memory_store_account_smt.read().unwrap().root().as_slice().clone()).to_string();
 
-        let flag = database_store_account_smt_root == memory_store_account_smt_root;
+    //     let flag = database_store_account_smt_root == memory_store_account_smt_root;
 
-        if flag {
-            info!("database smt root and memory smt root is same. database smt root: {:?}, memory smt root: {:?}",
-                database_store_account_smt_root,memory_store_account_smt_root);
-        } else {
-            error!("database smt root and memory smt root is different! database smt root: {:?}, memory smt root: {:?}",
-                database_store_account_smt_root,memory_store_account_smt_root);
-        }
+    //     if flag {
+    //         info!("database smt root and memory smt root is same. database smt root: {:?}, memory smt root: {:?}",
+    //             database_store_account_smt_root,memory_store_account_smt_root);
+    //     } else {
+    //         error!("database smt root and memory smt root is different! database smt root: {:?}, memory smt root: {:?}",
+    //             database_store_account_smt_root,memory_store_account_smt_root);
+    //     }
 
-        Ok(flag)
-    }
+    //     Ok(flag)
+    // }
 
     pub fn get_account_audits(&self, from_slot: i64, to_slot: i64) -> Result<Vec<AccountAuditRow>, NodeError> {
         let repo = AccountAuditRepo { pool: Box::from(self.client_pool.to_owned()) };
@@ -182,114 +204,114 @@ impl ExecuteService {
         Ok(count)
     }
 
-    pub fn generate_briefs(&mut self, start_slot: i64, end_slot: i64) -> Result<Vec<ChainBrief>, NodeError> {
-        if end_slot < start_slot {
-            error!("end_slot should greater than or equal start_slot  start_slot: {:?},end_slot: {:?}",
-                start_slot,end_slot);
-            return Err(
-                NodeError::new(generate_uuid(),
-                               format!("end_slot should greater than or equal start_slot  start_slot: {:?},end_slot: {:?}",
-                                       start_slot, end_slot),
-                )
-            );
-        }
+    // pub fn generate_briefs(&mut self, start_slot: i64, end_slot: i64) -> Result<Vec<ChainBrief>, NodeError> {
+    //     if end_slot < start_slot {
+    //         error!("end_slot should greater than or equal start_slot  start_slot: {:?},end_slot: {:?}",
+    //             start_slot,end_slot);
+    //         return Err(
+    //             NodeError::new(generate_uuid(),
+    //                            format!("end_slot should greater than or equal start_slot  start_slot: {:?},end_slot: {:?}",
+    //                                    start_slot, end_slot),
+    //             )
+    //         );
+    //     }
 
-        if start_slot < self.initial_slot as i64 || end_slot < self.initial_slot as i64 {
-            error!("start_slot and end_slot should greater than initial_slot  start_slot: {:?}, end_slot: {:?}, initial_slot: {:?}",
-                start_slot,end_slot,self.initial_slot);
-            return Err(
-                NodeError::new(generate_uuid(),
-                               format!("start_slot and end_slot should greater than initial_slot  start_slot: {:?}, end_slot: {:?}, initial_slot: {:?}",
-                                       start_slot, end_slot, self.initial_slot),
-                )
-            );
-        }
+    //     if start_slot < self.initial_slot as i64 || end_slot < self.initial_slot as i64 {
+    //         error!("start_slot and end_slot should greater than initial_slot  start_slot: {:?}, end_slot: {:?}, initial_slot: {:?}",
+    //             start_slot,end_slot,self.initial_slot);
+    //         return Err(
+    //             NodeError::new(generate_uuid(),
+    //                            format!("start_slot and end_slot should greater than initial_slot  start_slot: {:?}, end_slot: {:?}, initial_slot: {:?}",
+    //                                    start_slot, end_slot, self.initial_slot),
+    //             )
+    //         );
+    //     }
 
-        let transactions = self.get_transactions(start_slot, end_slot)?;
+    //     let transactions = self.get_transactions(start_slot, end_slot)?;
 
-        let mut slot_to_transactions: BTreeMap<i64, Vec<TransactionRow>> = BTreeMap::new();
-        for transaction in transactions.clone() {
-            slot_to_transactions.entry(transaction.slot).or_insert_with(Vec::new).push(transaction);
-        }
+    //     let mut slot_to_transactions: BTreeMap<i64, Vec<TransactionRow>> = BTreeMap::new();
+    //     for transaction in transactions.clone() {
+    //         slot_to_transactions.entry(transaction.slot).or_insert_with(Vec::new).push(transaction);
+    //     }
 
-        let account_audits = self.get_account_audits(start_slot, end_slot)?;
+    //     let account_audits = self.get_account_audits(start_slot, end_slot)?;
 
-        let mut slot_to_account_audits: BTreeMap<i64, Vec<AccountAuditRow>> = BTreeMap::new();
-        for account_audit in account_audits.clone() {
-            slot_to_account_audits.entry(account_audit.slot).or_insert_with(Vec::new).push(account_audit);
-        }
+    //     let mut slot_to_account_audits: BTreeMap<i64, Vec<AccountAuditRow>> = BTreeMap::new();
+    //     for account_audit in account_audits.clone() {
+    //         slot_to_account_audits.entry(account_audit.slot).or_insert_with(Vec::new).push(account_audit);
+    //     }
 
-        let mut slot_to_root_hash: HashMap<i64, String> = HashMap::new();
-        for (slot, account_audits) in slot_to_account_audits.clone() {
-            let kvs = self.convert(account_audits);
-            self.memory_store_account_smt.write().unwrap().update_all(kvs).unwrap();
-            let root_hash =
-                Hash::new(self.memory_store_account_smt.read().unwrap().root().as_slice().clone()).to_string();
-            slot_to_root_hash.insert(slot, root_hash);
-        }
+    //     let mut slot_to_root_hash: HashMap<i64, String> = HashMap::new();
+    //     for (slot, account_audits) in slot_to_account_audits.clone() {
+    //         let kvs = self.convert(account_audits);
+    //         self.memory_store_account_smt.write().unwrap().update_all(kvs).unwrap();
+    //         let root_hash =
+    //             Hash::new(self.memory_store_account_smt.read().unwrap().root().as_slice().clone()).to_string();
+    //         slot_to_root_hash.insert(slot, root_hash);
+    //     }
 
-        info!("start_slot: {:?} end_slot: {:?}", start_slot, end_slot);
+    //     info!("start_slot: {:?} end_slot: {:?}", start_slot, end_slot);
 
 
-        let mut slot_to_hash_account: HashMap<i64, String> = HashMap::new();
-        let mut slot_to_transaction_number: HashMap<i64, u32> = HashMap::new();
-        for (slot, transactions) in slot_to_transactions.clone() {
-            let account_audits = slot_to_account_audits.get(&slot.clone()).unwrap();
-            let mut ha = Hash::default();
-            for r in transactions.clone() {
-                let msg = r.legacy_message.unwrap();
-                let signatures = r.signatures;
-                let pks: Vec<Pubkey> = msg.account_keys.iter().map(|ak| Pubkey::try_from(ak.as_slice()).unwrap()).collect();
+    //     let mut slot_to_hash_account: HashMap<i64, String> = HashMap::new();
+    //     let mut slot_to_transaction_number: HashMap<i64, u32> = HashMap::new();
+    //     for (slot, transactions) in slot_to_transactions.clone() {
+    //         let account_audits = slot_to_account_audits.get(&slot.clone()).unwrap();
+    //         let mut ha = Hash::default();
+    //         for r in transactions.clone() {
+    //             let msg = r.legacy_message.unwrap();
+    //             let signatures = r.signatures;
+    //             let pks: Vec<Pubkey> = msg.account_keys.iter().map(|ak| Pubkey::try_from(ak.as_slice()).unwrap()).collect();
 
-                // Found all related (modified) accounts from account_audit
-                let modified_accounts: Vec<AccountAuditRow> = account_audits
-                    .iter()
-                    .filter(|a| pks.contains(&Pubkey::try_from(a.pubkey.as_slice()).unwrap()) && a.txn_signature.is_some())
-                    .cloned()
-                    .collect();
+    //             // Found all related (modified) accounts from account_audit
+    //             let modified_accounts: Vec<AccountAuditRow> = account_audits
+    //                 .iter()
+    //                 .filter(|a| pks.contains(&Pubkey::try_from(a.pubkey.as_slice()).unwrap()) && a.txn_signature.is_some())
+    //                 .cloned()
+    //                 .collect();
 
-                ha = compute_ha(
-                    &Signature::try_from(signatures[0].as_slice()).unwrap(),
-                    &modified_accounts
-                        .iter()
-                        .map(|a| a.to_smt_account())
-                        .collect::<Vec<SMTAccount>>(),
-                    &ha,
-                );
-            }
+    //             ha = compute_ha(
+    //                 &Signature::try_from(signatures[0].as_slice()).unwrap(),
+    //                 &modified_accounts
+    //                     .iter()
+    //                     .map(|a| a.to_smt_account())
+    //                     .collect::<Vec<SMTAccount>>(),
+    //                 &ha,
+    //             );
+    //         }
 
-            let hash_account = ha.to_string();
-            slot_to_hash_account.insert(slot, hash_account);
-            let transaction_number = transactions.len() as u32;
-            slot_to_transaction_number.insert(slot, transaction_number);
-        }
+    //         let hash_account = ha.to_string();
+    //         slot_to_hash_account.insert(slot, hash_account);
+    //         let transaction_number = transactions.len() as u32;
+    //         slot_to_transaction_number.insert(slot, transaction_number);
+    //     }
 
-        // 根据检查结果组装 briefs
-        let mut briefs: Vec<ChainBrief> = Vec::new();
+    //     // 根据检查结果组装 briefs
+    //     let mut briefs: Vec<ChainBrief> = Vec::new();
 
-        for slot in start_slot..=end_slot {
-            if let (Some(hash_account), Some(transaction_number), Some(root_hash)) = (
-                slot_to_hash_account.get(&slot),
-                slot_to_transaction_number.get(&slot),
-                slot_to_root_hash.get(&slot),
-            ) {
-                briefs.push(ChainBrief {
-                    slot: slot as u64,
-                    hash_account: hash_account.clone(),
-                    transaction_number: *transaction_number,
-                    root_hash: root_hash.clone(),
-                });
-            }
-        }
+    //     for slot in start_slot..=end_slot {
+    //         if let (Some(hash_account), Some(transaction_number), Some(root_hash)) = (
+    //             slot_to_hash_account.get(&slot),
+    //             slot_to_transaction_number.get(&slot),
+    //             slot_to_root_hash.get(&slot),
+    //         ) {
+    //             briefs.push(ChainBrief {
+    //                 slot: slot as u64,
+    //                 hash_account: hash_account.clone(),
+    //                 transaction_number: *transaction_number,
+    //                 root_hash: root_hash.clone(),
+    //             });
+    //         }
+    //     }
 
-        self.insert_briefs(briefs.clone()).expect("insert briefs failed");
+    //     self.insert_briefs(briefs.clone()).expect("insert briefs failed");
 
-        let kvs = self.convert(account_audits.clone());
-        self.database_store_account_smt.write().unwrap().update_all(kvs).unwrap();
-        self.update_last_slot(end_slot);
+    //     let kvs = self.convert(account_audits.clone());
+    //     self.database_store_account_smt.write().unwrap().update_all(kvs).unwrap();
+    //     self.update_last_slot(end_slot);
 
-        Ok(briefs)
-    }
+    //     Ok(briefs)
+    // }
 
     fn convert(&self, account_audits: Vec<AccountAuditRow>) -> Vec<(sparse_merkle_tree::H256, SMTAccount)> {
         let mut kvs: Vec<(sparse_merkle_tree::H256, SMTAccount)> = Vec::new();
