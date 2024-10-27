@@ -159,7 +159,17 @@ impl ChainService {
         return is_success.clone();
     }
 
-    pub fn get_latest_slot(&mut self) -> Option<u64> {
+    pub fn get_latest_slot_from_chain(&mut self) -> Option<u64> {
+        let all_slots = self.get_all_slots_from_chain().unwrap();
+        
+        if all_slots.len() != 0 {
+            return Some(all_slots[all_slots.len() -1 ])
+        }
+        
+        None
+    }
+
+    pub fn get_all_slots_from_chain(&mut self) -> Option<Vec<u64>> {
         let root_mgr_program_id_binding = Pubkey::from_str(&self.chain_config.l1_root_mgr_program_id);
         let root_mgr_program_id = root_mgr_program_id_binding.as_ref().unwrap();
 
@@ -174,11 +184,12 @@ impl ChainService {
 
         let all_slots = chain_root_mgr_service.fetch_all_slots()?;
         info!("all slots: {:?}", all_slots);
-        
-        if all_slots.len() != 0 {
-            return Some(all_slots[all_slots.len()-1]);
-        }
-        None
+
+        Some(all_slots)
+        // if all_slots.len() != 0 {
+        //     return Some(all_slots[all_slots.len()-1]);
+        // }
+        // None
     }
 
     pub fn get_roots_info_by_slot(&mut self, slot: u64) -> Option<RootsInfo> {

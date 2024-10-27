@@ -68,15 +68,15 @@ fn main() {
                 let _ = monitor.start();
             });
 
-            loop{
-                sleep_seconds(1);
-            }
+            // loop{
+            //     sleep_seconds(1);
+            // }
 
-            // let mut filter = Filter::new()
-            //     .store(&store)
-            //     .contract(&contract);
+            let mut filter = Filter::new()
+                .store(&store)
+                .contract(&contract);
 
-            // filter.start();
+            filter.start();
         }
     }
 }

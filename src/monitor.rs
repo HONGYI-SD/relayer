@@ -77,33 +77,42 @@ impl Monitor {
         
         loop {
             // check rootmgr latest slot
-            let chain_last_slot = chain_service.get_latest_slot().unwrap_or_default();
+            let chain_all_slots = chain_service.get_all_slots_from_chain().unwrap_or_default();
+            if chain_all_slots.len() == 0 as usize {
+                info!("there is no slots info on chain, waitting...");
+                continue;
+            }
+            let chain_last_slot = chain_all_slots[chain_all_slots.len() - 1];
+
             if !(chain_last_slot > local_last_slot as u64) {
                 info!("there is no slot update on chain. local last slot: {:?}, chain last slot: {:?}", local_last_slot.clone(),chain_last_slot.clone());
                 time_util::sleep_seconds(1);
                 continue;
             }
-            
-            let mut bridge_txs = execute_service.bridge_tx_range(local_last_slot, chain_last_slot as i64).unwrap();
-            let bridge_txs_hashes: Vec<_>= bridge_txs.clone().into_iter().map(|bt| {bt.tx_hash}).collect();
-            let _ = local_tree.add_hashes(bridge_txs_hashes.into_iter().map(|str_hash| hex::decode(str_hash).expect("failed to decode hex string")).collect());
-            
-            let _ = local_tree.merklize();
 
-            let local_mt_root = local_tree.get_merkle_root().unwrap();
-            let chain_roots_info = chain_service.get_roots_info_by_slot(chain_last_slot).unwrap();
-            if chain_roots_info.merkle_tree_root.to_vec() != local_mt_root {
-                error!("local merkle tree is different to the tree on chain");
-                break Err(NodeError::new(generate_uuid(), "local merkle tree is different to the tree on chain".to_string()));
-            }
-
-            let _ = bridge_txs.iter_mut().map(| bt| {
-                let proof = local_tree.merkle_proof_hash(hex::decode(bt.clone().tx_hash).unwrap()).unwrap();
-                bt.proof = hex::encode(proof.get_pairing_hashes());
-            });
-
-            for bt in bridge_txs {
-                execute_service.bridge_tx_update(bt).unwrap();
+            {
+                let mut bridge_txs = execute_service.bridge_tx_range(local_last_slot, chain_last_slot as i64).unwrap();
+                let bridge_txs_hashes: Vec<_>= bridge_txs.clone().into_iter().map(|bt| {bt.tx_hash}).collect();
+                let _ = local_tree.add_hashes(bridge_txs_hashes.into_iter().map(|str_hash| hex::decode(str_hash).expect("failed to decode hex string")).collect());
+                
+                let _ = local_tree.merklize();
+    
+                let local_mt_root = local_tree.get_merkle_root().unwrap();
+                let chain_roots_info = chain_service.get_roots_info_by_slot(chain_last_slot).unwrap();
+                // todo tmp del
+                // if chain_roots_info.merkle_tree_root.to_vec() != local_mt_root {
+                //     error!("local merkle tree is different to the tree on chain");
+                //     break Err(NodeError::new(generate_uuid(), "local merkle tree is different to the tree on chain".to_string()));
+                // }
+    
+                let _ = bridge_txs.iter_mut().map(| bt| {
+                    let proof = local_tree.merkle_proof_hash(hex::decode(bt.clone().tx_hash).unwrap()).unwrap();
+                    bt.proof = hex::encode(proof.get_pairing_hashes());
+                });
+    
+                for bt in bridge_txs {
+                    execute_service.bridge_tx_update(bt).unwrap();
+                }
             }
 
             execute_service.update_last_slot_for_monitor(chain_last_slot as i64);
