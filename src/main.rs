@@ -4,9 +4,11 @@ use log::{error, info};
 use relayer::common::node_configs::NodeConfiguration;
 use relayer::monitor::Monitor;
 use relayer::filter::Filter;
+use relayer::utils;
 use relayer::utils::log_util::{init_logger, LogOutput};
 
 use clap::{App, Arg};
+use relayer::utils::time_util::sleep_seconds;
 
 
 fn main() {
@@ -53,22 +55,28 @@ fn main() {
             let store = cfg.store.clone();
             let chain = cfg.chain.clone();
             let contract = cfg.contract.clone();
-            // let monitor_store = store.clone();
-            // let monitor_chain = chain.clone();
+            let monitor_store = store.clone();
+            let monitor_chain = chain.clone();
+            let monitor_contract = contract.clone();
 
-            // let _ = thread::spawn(move || {
-            //     let mut monitor = Monitor::new()
-            //         .load_chain_config(&monitor_chain)
-            //         .load_store_config(&monitor_store);
+            let _ = thread::spawn(move || {
+                let mut monitor = Monitor::new()
+                    .load_chain_config(&monitor_chain)
+                    .load_store_config(&monitor_store)
+                    .load_contract_config(&monitor_contract);
 
-            //     let _ = monitor.start();
-            // });
+                let _ = monitor.start();
+            });
 
-            let mut filter = Filter::new()
-                .store(&store)
-                .contract(&contract);
+            loop{
+                sleep_seconds(1);
+            }
 
-            filter.start();
+            // let mut filter = Filter::new()
+            //     .store(&store)
+            //     .contract(&contract);
+
+            // filter.start();
         }
     }
 }

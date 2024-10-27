@@ -92,7 +92,7 @@ impl Monitor {
 
             let local_mt_root = local_tree.get_merkle_root().unwrap();
             let chain_roots_info = chain_service.get_roots_info_by_slot(chain_last_slot).unwrap();
-            if chain_roots_info.merkle_root.to_vec() != local_mt_root {
+            if chain_roots_info.merkle_tree_root.to_vec() != local_mt_root {
                 error!("local merkle tree is different to the tree on chain");
                 break Err(NodeError::new(generate_uuid(), "local merkle tree is different to the tree on chain".to_string()));
             }

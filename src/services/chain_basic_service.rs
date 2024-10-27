@@ -9,6 +9,8 @@ pub const TALLY_PDA_SEED: &[u8] = b"fraud_proof_tally";
 
 pub const STATE_PDA_SEED: &[u8] = b"fraud_proof_state";
 
+pub const ROOTS_PDA_SEED: &[u8] = b"roots";
+
 
 pub struct ChainBasicService<'a> {
     pub rpc_client: &'a RpcClient,
@@ -46,5 +48,10 @@ impl ChainBasicService<'_> {
     pub fn find_brief_account_address(program_id: &Pubkey, wrap_slot: WrapSlot) -> (Pubkey, u8) {
         let slot_bytes = wrap_slot.slot.clone().to_le_bytes();
         return Pubkey::find_program_address(&[BRIEF_PDA_SEED, slot_bytes.as_ref()], program_id);
+    }
+
+    pub fn find_roots_account_address(program_id: &Pubkey, wrap_slot: WrapSlot) -> (Pubkey, u8) {
+        let slot_bytes = wrap_slot.slot.to_le_bytes();
+        return Pubkey::find_program_address(&[ROOTS_PDA_SEED, slot_bytes.as_ref()], program_id);
     }
 }

@@ -20,6 +20,7 @@ pub struct ChainConfiguration {
     // keypair base58 string
     pub execute_keypair: String,
     pub l1_root_mgr_program_id: String,
+    pub l1_slots_account_pubkey: String,
 }
 
 
