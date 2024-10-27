@@ -29,7 +29,6 @@ pub struct ChainRootMgrService<'a> {
 
 impl ChainRootMgrService<'_> {
     pub fn fetch_all_slots(&self) -> Option<Vec<u64>> {
-        //let slots_account_pubkey = Pubkey::from_str("todo fixed account").unwrap();
         let slots_acc_data = self.rpc_client.get_account_data(self.slots_acc_pubkey).unwrap();
         
         let all_slots = SlotsAccount::deserialize(&mut &slots_acc_data[8..]).unwrap();
