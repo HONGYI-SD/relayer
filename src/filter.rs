@@ -56,11 +56,10 @@ impl Filter {
         loop {
             // 获取最后处理的区块高度
             let last_slot = execute_service.get_last_slot().unwrap();
-            //let max_slot = execute_service.get_max_slot().unwrap(); //todo tmp del
-            let max_slot: i64 = 10;
+            let max_slot = execute_service.get_max_slot().unwrap(); //todo tmp del
             let initial_slot = execute_service.get_initial_slot().unwrap();
             if max_slot - 1 <= last_slot {
-                info!("all slots are submitted. last slot: {:?} max slot: {:?}", last_slot.clone(),max_slot.clone());
+                info!("all slots are filtered. last slot: {:?} max slot: {:?}", last_slot.clone(),max_slot.clone());
                 time_util::sleep_seconds(1);
                 continue;
             }

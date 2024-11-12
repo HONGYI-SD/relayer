@@ -1,12 +1,14 @@
 store:
-  host: "127.0.0.1"
+  host: "52.77.241.74"
   port: 5432
   username: "solana"
   password: "1111"
   schema: "solana"
 
 contract:
-  l2_message_program_id: "4yNGxshZTzeSv6ZLSBwNGfDfZyCEbxtmW4MvRWCEoAmy"
+  l2_message_program_id: "8TDycJBTEsyWV2w7vQnTmrePBaHHJDdDxxV3vekir2gC"
+  l2_message_fund_account_pubkey: "H5NTzx4cSD5QAymrSN3CeRqLrmUqfkoSMhphvgZKp4A3"
+  system_program_id: "11111111111111111111111111111111"
 
 chain:
   url: "http://127.0.0.1:8899"

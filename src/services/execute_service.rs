@@ -4,7 +4,7 @@ use crate::contract::chain_brief::ChainBrief;
 use crate::models::account_audit_row::AccountAuditRow;
 use crate::models::brief_model::convert_chain_briefs_to_brief_records;
 use crate::models::transaction_model::TransactionRow;
-use crate::models::bridge_transaction_model::{BridgeTxRecord, BridgeTxRow};
+use crate::models::bridge_transaction_model::{BridgeTxInfo, BridgeTxRecord, BridgeTxRow, MessageType};
 use crate::repositories::account_audit_repo::AccountAuditRepo;
 use crate::repositories::block_repo::BlockRepo;
 use crate::repositories::bridge_tx_repo::BridgeTxRepo;
@@ -13,10 +13,13 @@ use crate::repositories::chain_repo::ChainRepo;
 use crate::repositories::transaction_repo::TransactionRepo;
 use crate::utils::store_util::{create_one, create_pool, PgConnectionPool};
 use crate::utils::uuid_util::generate_uuid;
+use borsh::BorshDeserialize;
 use log::{error, info};
 use postgres::Client;
 use rocksdb::DB;
-use solana_sdk::pubkey::Pubkey;
+use solana_clap_utils::nonce;
+use solana_sdk::pubkey::{self, Pubkey};
+use solana_sdk::signature::Signature;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
@@ -25,6 +28,8 @@ pub struct ExecuteService {
     client_pool: PgConnectionPool,
     client_one: Client,
     l2_msg_program_id: String,
+    l2_message_fund_account_pubkey: String,
+    system_program_id: String,
     rocksdb: Arc<RwLock<DB>>,
     monitor_rocksdb_slot: Arc<RwLock<DB>>,
     initial_slot: u64,
@@ -40,6 +45,8 @@ impl ExecuteService {
         let one = create_one(config.to_owned());
 
         let l2_msg_program_id = contract.l2_message_program_id.clone();
+        let l2_message_fund_account_pubkey = contract.l2_message_fund_account_pubkey.clone();
+        let system_program_id = contract.system_program_id.clone();
         if is_filter {
             let slot_dir = Path::new("./relayer/slot");
             let slot_db = DB::open_default(slot_dir).unwrap();
@@ -53,6 +60,8 @@ impl ExecuteService {
                 client_pool: pool,
                 client_one: one,
                 l2_msg_program_id,
+                l2_message_fund_account_pubkey,
+                system_program_id,
                 rocksdb,
                 monitor_rocksdb_slot,
                 initial_slot: 2,
@@ -71,6 +80,8 @@ impl ExecuteService {
                 client_pool: pool,
                 client_one: one,
                 l2_msg_program_id,
+                l2_message_fund_account_pubkey,
+                system_program_id,
                 rocksdb,
                 monitor_rocksdb_slot,
                 initial_slot: 2,
@@ -177,13 +188,15 @@ impl ExecuteService {
         let transactions = self.get_transactions(start_slot, end_slot)?;
         let mut bridge_txs: Vec<BridgeTxRecord> = Vec::new();
 
-        for transaction in transactions.clone() {
+        for transaction in &transactions {
             let msg = transaction.clone().legacy_message.unwrap();
             let pks: Vec<Pubkey> = msg.account_keys.iter().map(|ak| Pubkey::try_from(ak.as_slice()).unwrap()).collect();
 
-            if pks.contains(&Pubkey::from_str(&self.l2_msg_program_id).unwrap()) {
-                info!("push!!!!!");
-                bridge_txs.push(BridgeTxRecord::from(transaction));
+            if self.check_bridge_message_pubkeys(&pks) {
+                if let Some(bridge_tx_record) = self.txraw_to_bridgetx(transaction, &pks){
+                    info!("dong: bridge_tx_record:{:?}", bridge_tx_record);
+                    bridge_txs.push(bridge_tx_record);
+                }
             }
         }
         
@@ -191,6 +204,63 @@ impl ExecuteService {
         Ok(bridge_txs)
     }
 
+    pub fn check_bridge_message_pubkeys(&self, pubkeys: &Vec<Pubkey>) -> bool {
+        if pubkeys.contains(&Pubkey::from_str(&self.l2_msg_program_id).unwrap()) &&
+            pubkeys.contains(&Pubkey::from_str(&self.l2_message_fund_account_pubkey).unwrap()) &&
+            pubkeys.contains(&Pubkey::from_str(&self.system_program_id).unwrap()) {
+                return true;
+            }
+        
+        return false;
+    }
+
+    pub fn txraw_to_bridgetx(&self, tx: &TransactionRow, pubkeys: &Vec<Pubkey>) -> Option<BridgeTxRecord> {
+        if tx.meta.inner_instructions.as_ref().unwrap().len() == 0 {
+            return None;
+        }
+        if tx.meta.inner_instructions.as_ref().unwrap()[0].instructions.len() == 0 {
+            return None;
+        } 
+        // system transfer instruction data len is 9 or 12
+        let data_len = tx.meta.inner_instructions.as_ref().unwrap()[0].instructions[0].data.len();
+        if  data_len < 9 {
+            return None;
+        }
+        if tx.meta.inner_instructions.as_ref().unwrap()[0].instructions[0].accounts.len() != 2 {
+            return None;
+        }
+        let accounts_idx = tx.meta.inner_instructions.as_ref().unwrap()[0].instructions[0].accounts.clone();
+        let ix_data = tx.meta.inner_instructions.as_ref().unwrap()[0].instructions[0].data.clone();
+        let opcode = ix_data[0];
+        if opcode != 2 { // opcode = 2 means system transfer
+            return None;
+        }
+
+        let from_account = pubkeys[accounts_idx[0] as usize];
+        let to_account = pubkeys[accounts_idx[1] as usize];
+
+        // ix_data[start..data_len] is transfer amount
+        let start = data_len - 8; 
+        let amount = u64::from_le_bytes(ix_data[start..data_len].try_into().unwrap());
+
+        let bridge_tx_info = BridgeTxInfo{
+            from: from_account,
+            to: to_account,
+            amount,
+            message_type: MessageType::Native,
+        };
+        info!("dong: bridge_tx_info {:?}", bridge_tx_info);
+        let tx_hash = bridge_tx_info.double_hash_array();
+        info!("dong: tx_hash {:?}", tx_hash);
+        let sig = Signature::try_from(tx.signatures[0].clone()).unwrap();
+        
+        Some(BridgeTxRecord{
+            slot: tx.slot,
+            signature: sig.to_string(),
+            tx_hash: "".to_string(),
+            proof: "".to_string(),
+        })
+    }
     pub fn insert_bridge_txs(&self, bridge_txs: Vec<BridgeTxRecord>) -> Result<u32, NodeError> {
         let repo = BridgeTxRepo{pool: Box::from(self.client_pool.to_owned())};
 

@@ -11,6 +11,8 @@ pub struct NodeConfiguration {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ContractConfiguration {
     pub l2_message_program_id: String,
+    pub l2_message_fund_account_pubkey: String,
+    pub system_program_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

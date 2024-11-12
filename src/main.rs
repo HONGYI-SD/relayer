@@ -59,18 +59,14 @@ fn main() {
             let monitor_chain = chain.clone();
             let monitor_contract = contract.clone();
 
-            let _ = thread::spawn(move || {
-                let mut monitor = Monitor::new()
-                    .load_chain_config(&monitor_chain)
-                    .load_store_config(&monitor_store)
-                    .load_contract_config(&monitor_contract);
+            // let _ = thread::spawn(move || {
+            //     let mut monitor = Monitor::new()
+            //         .load_chain_config(&monitor_chain)
+            //         .load_store_config(&monitor_store)
+            //         .load_contract_config(&monitor_contract);
 
-                let _ = monitor.start();
-            });
-
-            // loop{
-            //     sleep_seconds(1);
-            // }
+            //     let _ = monitor.start();
+            // });
 
             let mut filter = Filter::new()
                 .store(&store)

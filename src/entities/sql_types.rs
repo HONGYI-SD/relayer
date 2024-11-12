@@ -52,7 +52,6 @@ pub enum DbTransactionErrorCode {
     WouldExceedMaxBlockCostLimit,
     UnsupportedVersion,
     InvalidWritableAccount,
-    WouldExceedMaxAccountDataCostLimit,
     TooManyAccountLocks,
     AddressLookupTableNotFound,
     InvalidAddressLookupTableOwner,
@@ -67,8 +66,9 @@ pub enum DbTransactionErrorCode {
     MaxLoadedAccountsDataSizeExceeded,
     InvalidLoadedAccountsDataSizeLimit,
     ResanitizationNeeded,
-    UnbalancedTransaction,
     ProgramExecutionTemporarilyRestricted,
+    UnbalancedTransaction,
+    ProgramCacheHitMaxLimit,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, FromSql, ToSql, PartialEq)]
