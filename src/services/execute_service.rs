@@ -237,7 +237,7 @@ impl ExecuteService {
         }
 
         let from_account = pubkeys[accounts_idx[0] as usize];
-        let to_account = pubkeys[accounts_idx[1] as usize];
+        let _to_account = pubkeys[accounts_idx[1] as usize];
 
         // ix_data[start..data_len] is transfer amount
         let start = data_len - 8; 
@@ -245,7 +245,7 @@ impl ExecuteService {
 
         let bridge_tx_info = BridgeTxInfo{
             from: from_account,
-            to: to_account,
+            to: from_account, // from and to si same account
             amount,
             message_type: MessageType::Native,
         };
