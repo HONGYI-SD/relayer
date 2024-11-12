@@ -249,15 +249,14 @@ impl ExecuteService {
             amount,
             message_type: MessageType::Native,
         };
-        info!("dong: bridge_tx_info {:?}", bridge_tx_info);
-        let tx_hash = bridge_tx_info.double_hash_array();
-        info!("dong: tx_hash {:?}", tx_hash);
+        let tx_info_hash = bridge_tx_info.double_hash_array();
+        info!("dong: tx_info_hash {:?}", tx_info_hash);
         let sig = Signature::try_from(tx.signatures[0].clone()).unwrap();
         
         Some(BridgeTxRecord{
             slot: tx.slot,
             signature: sig.to_string(),
-            tx_hash: "".to_string(),
+            tx_info_hash: tx_info_hash.into(),
             proof: "".to_string(),
         })
     }
@@ -270,7 +269,7 @@ impl ExecuteService {
         Ok(count)
     }
 
-    pub fn brige_txs_hashes(&self, from_slot: i64, to_slot: i64) -> Result<Vec<String>, NodeError> {
+    pub fn brige_txs_hashes(&self, from_slot: i64, to_slot: i64) -> Result<Vec<Vec<u8>>, NodeError> {
         let repo = BridgeTxRepo{pool: Box::from(self.client_pool.to_owned())};
 
         repo.bridge_tx_hashes(from_slot, to_slot)

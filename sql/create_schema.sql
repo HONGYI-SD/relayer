@@ -2,7 +2,7 @@
 -- (
 --     id         bigserial PRIMARY KEY,
 --     slot       BIGINT    UNIQUE NOT NULL,
---     root_hash  VARCHAR(256) DEFAULT '',
+--     tx_info_hash  BYTEA     NOT NULL,
 --     hash_account       VARCHAR(256)  DEFAULT '',
 --     transaction_number INT           DEFAULT 0,
 --     updated_on TIMESTAMP default current_timestamp
@@ -15,7 +15,7 @@ CREATE TABLE bridge_transaction
     id         bigserial PRIMARY KEY,
     slot       BIGINT    UNIQUE NOT NULL,
     signature  VARCHAR(256) DEFAULT '',
-    tx_hash  VARCHAR(256) DEFAULT '',
+    tx_info_hash     BYTEA     NOT NULL,
     proof  VARCHAR(256) DEFAULT '',
     updated_on TIMESTAMP default current_timestamp
 )

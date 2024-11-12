@@ -12,8 +12,8 @@ diesel::table! {
         #[sql_name = "signature"]
         column_signature -> VarChar,
 
-        #[sql_name = "tx_hash"]
-        column_tx_hash -> VarChar,
+        #[sql_name = "tx_info_hash"]
+        column_tx_info_hash -> Bytea,
 
         #[sql_name = "proof"]
         column_proof -> VarChar,

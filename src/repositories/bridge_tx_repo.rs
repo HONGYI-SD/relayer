@@ -76,9 +76,9 @@ impl BridgeTxRepo {
         Ok(rows)
     }
 
-    pub fn bridge_tx_hashes(&self, from_slot: i64, to_slot: i64) -> Result<Vec<String>, NodeError> {
+    pub fn bridge_tx_hashes(&self, from_slot: i64, to_slot: i64) -> Result<Vec<Vec<u8>>, NodeError> {
         let bridge_txs = self.range(from_slot, to_slot).unwrap();
-        let hashes = bridge_txs.into_iter().map(|t| {t.tx_hash}).collect();
+        let hashes = bridge_txs.into_iter().map(|t| {t.tx_info_hash}).collect();
         
         Ok(hashes)
     }

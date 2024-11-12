@@ -17,7 +17,7 @@ pub struct BridgeTxData {
     pub signature: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tx_hash: Option<String>,
+    pub tx_info_hash: Option<Vec<u8>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proof: Option<String>,
@@ -38,9 +38,9 @@ pub struct BridgeTxRow {
     #[diesel(column_name = column_signature)]
     pub signature: String,
 
-    #[diesel(sql_type = Varchar)]
-    #[diesel(column_name = column_tx_hash)]
-    pub tx_hash: String,
+    #[diesel(sql_type = Bytea)]
+    #[diesel(column_name = column_tx_info_hash)]
+    pub tx_info_hash: Vec<u8>,
 
     #[diesel(sql_type = Varchar)]
     #[diesel(column_name = column_proof)]
@@ -62,9 +62,9 @@ pub struct BridgeTxRecord {
     #[diesel(column_name = column_signature)]
     pub signature: String,
 
-    #[diesel(sql_type = Varchar)]
-    #[diesel(column_name = column_tx_hash)]
-    pub tx_hash: String,
+    #[diesel(sql_type = Bytea)]
+    #[diesel(column_name = column_tx_info_hash)]
+    pub tx_info_hash: Vec<u8>,
 
     #[diesel(sql_type = Varchar)]
     #[diesel(column_name = column_proof)]
@@ -76,7 +76,7 @@ impl From<&TransactionRow> for BridgeTxRecord {
         BridgeTxRecord { 
             slot: tr.slot, 
             signature: "todo signature".to_string(), //todo tr.signatures[0].as_slice(), 
-            tx_hash: "todo tx hash".to_string(),  //todo, compute bridge tx hash
+            tx_info_hash: "todo tx hash".as_bytes().to_vec(),  //todo, compute bridge tx hash
             proof: "tx proof".to_string() // todo
         }
     }
@@ -87,7 +87,7 @@ impl From<BridgeTxRow> for BridgeTxRecord {
         BridgeTxRecord { 
             slot: btr.slot, 
             signature: "todo signature".to_string(), // todo 
-            tx_hash: "todo tx hash".to_string(), // todo 
+            tx_info_hash: "todo tx hash".as_bytes().to_vec(), // todo 
             proof: "todo tx proof".to_string()  // todo
         }
     }

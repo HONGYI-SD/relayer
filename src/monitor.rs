@@ -72,7 +72,7 @@ impl Monitor {
         let local_last_slot = execute_service.get_last_slot_for_monitor().unwrap();
         if local_last_slot > 0 {
             let old_hashes = execute_service.brige_txs_hashes(0, local_last_slot).unwrap();
-            let _ = local_tree.add_hashes(old_hashes.into_iter().map(|str_hash| hex::decode(str_hash).expect("failed to decode hex string")).collect());
+            let _ = local_tree.add_hashes(old_hashes);
         }
         
         loop {
@@ -92,7 +92,7 @@ impl Monitor {
 
             {
                 let mut bridge_txs = execute_service.bridge_tx_range(local_last_slot, chain_last_slot as i64).unwrap();
-                let bridge_txs_hashes: Vec<_>= bridge_txs.clone().into_iter().map(|bt| {bt.tx_hash}).collect();
+                let bridge_txs_hashes: Vec<_>= bridge_txs.clone().into_iter().map(|bt| {bt.tx_info_hash}).collect();
                 let _ = local_tree.add_hashes(bridge_txs_hashes.into_iter().map(|str_hash| hex::decode(str_hash).expect("failed to decode hex string")).collect());
                 
                 let _ = local_tree.merklize();
@@ -106,7 +106,7 @@ impl Monitor {
                 // }
     
                 let _ = bridge_txs.iter_mut().map(| bt| {
-                    let proof = local_tree.merkle_proof_hash(hex::decode(bt.clone().tx_hash).unwrap()).unwrap();
+                    let proof = local_tree.merkle_proof_hash(hex::decode(bt.clone().tx_info_hash).unwrap()).unwrap();
                     bt.proof = hex::encode(proof.get_pairing_hashes());
                 });
     

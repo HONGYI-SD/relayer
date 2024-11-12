@@ -11,9 +11,9 @@ contract:
   system_program_id: "11111111111111111111111111111111"
 
 chain:
-  url: "http://127.0.0.1:8899"
+  url: "http://52.77.241.74:8899"
   fraud_proof_native_program_id: ""
   #  keypair base58 string
   execute_keypair: ""
-  l1_root_mgr_program_id: "AYGFPr9swuxKvRhkQHXwpAfkqpQP8iRvRCgLkfQkCkE1"
-  l1_slots_account_pubkey: "CRQSHYJQjJcLMurc5orYk7V68eHjLbQaBQUL49E7nwFc"
+  l1_root_mgr_program_id: "G7i5mhVgDrmt5X4FWRR1jshkky7q9HxRpwWGjPyD4ymA"
+  l1_slots_account_pubkey: "62NpAXRsec9NiCdeSCWHQSwhoGNC3FaJo37G1An1UorM"
