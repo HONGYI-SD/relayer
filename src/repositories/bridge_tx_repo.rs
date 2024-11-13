@@ -1,6 +1,6 @@
 use crate::common::node_error::NodeError;
 use crate::entities::account_audit_entity::table_account_audit::column_write_version;
-use crate::entities::bridge_transaction_entity::table_bridge_transaction::column_slot;
+use crate::entities::bridge_transaction_entity::table_bridge_transaction::{column_is_generated_proof, column_signature, column_slot};
 use crate::entities::bridge_transaction_entity::table_bridge_transaction::dsl::table_bridge_transaction;
 use crate::models::bridge_transaction_model::{BridgeTxRecord, BridgeTxRow};
 use crate::utils::store_util::{PgConnectionPool, PooledPgConnection};
@@ -35,6 +35,28 @@ impl BridgeTxRepo {
         Ok(row)
     }
 
+    pub fn get_last_bridge_tx_has_proof(&self) -> Result<BridgeTxRow, NodeError> {
+        let conn: &mut PooledPgConnection = &mut self.pool.get()?;
+
+        let results = table_bridge_transaction
+        .order(column_slot.desc())
+        .filter(column_is_generated_proof.eq(true))
+        .limit(1)
+        .load::<BridgeTxRow>(conn)
+        .expect("Error loading chain");
+
+        if results.is_empty() {
+            return Err(
+                NodeError::new(generate_uuid(), 
+                "Couldn`t find query last_bridge_tx_has_proof from database".to_string()
+                )
+            );
+        }
+
+        let row = results[0].clone();
+        Ok(row)
+    }
+
     pub fn insert(&self, records: Vec<BridgeTxRecord>) -> Result<Vec<BridgeTxRow>, NodeError> {
         let conn: &mut PooledPgConnection = &mut self.pool.get()?;
 
@@ -53,7 +75,7 @@ impl BridgeTxRepo {
     pub fn update(&self, record: BridgeTxRecord) -> Result<BridgeTxRow, NodeError> {
         let conn: &mut PooledPgConnection = &mut self.pool.get()?;
     
-        let updated_row = diesel::update(table_bridge_transaction.filter(column_slot.eq(record.slot)))
+        let updated_row = diesel::update(table_bridge_transaction.filter(column_signature.eq(record.signature.clone())))
             .set(&record) 
             .get_result::<BridgeTxRow>(conn)  
             .map_err(|e| {

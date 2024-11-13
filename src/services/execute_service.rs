@@ -118,7 +118,7 @@ impl ExecuteService {
         Ok(slot)
     }
 
-    pub fn get_last_slot_for_monitor(&self) -> Result<i64, NodeError> {
+    pub fn get_last_slot_from_rkdb_for_monitor(&self) -> Result<i64, NodeError> {
         let mut repo = ChainRepo{ db: &self.monitor_rocksdb_slot };
 
         let slot = repo.show().unwrap_or(0);
@@ -126,7 +126,20 @@ impl ExecuteService {
         Ok(slot)
     }
 
-    pub fn update_last_slot_for_monitor(&self, slot: i64) {
+    pub fn get_last_has_proof_bridge_tx_from_pg_for_monitor(&self) -> Result<BridgeTxRecord, NodeError>{
+        let repo = BridgeTxRepo{ pool: Box::from(self.client_pool.to_owned()) };
+        match repo.get_last_bridge_tx_has_proof() {
+            Ok(tx_raw) => {
+                Ok(BridgeTxRecord::from(tx_raw))
+            }
+            Err(err) => {
+                Err(err)
+            }
+        }
+
+    }
+
+    pub fn update_last_slot_to_rkdb_for_monitor(&self, slot: i64) {
         let mut repo = ChainRepo { db: &self.monitor_rocksdb_slot };
 
         repo.upsert(slot);

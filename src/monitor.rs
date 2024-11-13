@@ -68,59 +68,85 @@ impl Monitor {
         let chain_service = self.chain_service.as_mut().unwrap();
         let execute_service = self.execute_service.as_mut().unwrap();
         let local_tree = self.local_tree.as_mut().unwrap();
+        let mut local_tree_leaf_num = 0;
 
-        let local_last_slot = execute_service.get_last_slot_for_monitor().unwrap();
-        info!("dong: local_last_slot: {}", local_last_slot);
-        if local_last_slot > 0 {
-            let old_hashes = execute_service.brige_txs_hashes(0, local_last_slot).unwrap();
+        let mut last_has_proof_tx_slot: i64 = 0;
+        if let Ok(last_has_proof_tx) = execute_service.get_last_has_proof_bridge_tx_from_pg_for_monitor() {
+            last_has_proof_tx_slot = last_has_proof_tx.slot;
+        }
+        //let last_has_proof_tx_slot = execute_service.get_last_slot_from_rkdb_for_monitor().unwrap();
+        info!("dong: local_last_slot: {}", last_has_proof_tx_slot);
+        if last_has_proof_tx_slot > 0 {
+            let old_hashes = execute_service.brige_txs_hashes(0, last_has_proof_tx_slot).unwrap();
+            if old_hashes.len() != 0 {
+                local_tree_leaf_num = old_hashes.len() - 1;
+            }
             info!("dong: old_hashes {:?}", old_hashes);
             let _ = local_tree.add_hashes(old_hashes);
+            
         }
         
         loop {
             // check rootmgr latest slot
+            
             let chain_all_slots = chain_service.get_all_slots_from_chain().unwrap_or_default();
+            //let chain_all_slots = vec![52833];
             if chain_all_slots.len() == 0 as usize {
                 info!("there is no slots info on chain, waitting...");
+                time_util::sleep_seconds(1);
                 continue;
             }
             info!("dong: chain_all_slots: {:?}", chain_all_slots);
             let chain_last_slot = chain_all_slots[chain_all_slots.len() - 1];
-            info!("dong: local_last_slot: {}, chain_last_slot: {}", local_last_slot, chain_last_slot);
-            
-            if !(chain_last_slot > local_last_slot as u64) {
-                info!("there is no slot update on chain. local last slot: {:?}, chain last slot: {:?}", local_last_slot.clone(),chain_last_slot.clone());
+            info!("dong: local_last_slot: {}, chain_last_slot: {}", last_has_proof_tx_slot, chain_last_slot);
+
+            if !(chain_last_slot > last_has_proof_tx_slot as u64) {
+                info!("there is no slot update on chain. local last slot: {:?}, chain last slot: {:?}", last_has_proof_tx_slot.clone(),chain_last_slot.clone());
                 time_util::sleep_seconds(1);
                 continue;
             }
-
-            {
-                let mut bridge_txs = execute_service.bridge_tx_range(local_last_slot, chain_last_slot as i64).unwrap();
-                let bridge_txs_hashes: Vec<_>= bridge_txs.clone().into_iter().map(|bt| {bt.tx_info_hash}).collect();
+            
+            let chain_sub_slots: Vec<u64> = chain_all_slots.iter().filter(|&&s| s > last_has_proof_tx_slot as u64).cloned().collect();
+            let mut tmp_start_slot = last_has_proof_tx_slot;
+            for tmp_slot in chain_sub_slots {
+                let mut bridge_txs = execute_service.bridge_tx_range(tmp_start_slot, tmp_slot as i64).unwrap();
+                let bridge_txs_hashes: Vec<Vec<u8>>= bridge_txs.clone().into_iter().map(|bt| {bt.tx_info_hash}).collect();
                 info!("dong: bridge_txs_hashes {:?}", bridge_txs_hashes);
-                let _ = local_tree.add_hashes(bridge_txs_hashes);
+                let _ = local_tree.add_hashes(bridge_txs_hashes).unwrap();
                 
-                let _ = local_tree.merklize();
+                let _ = local_tree.merklize().unwrap();
     
                 let local_mt_root = local_tree.get_merkle_root().unwrap();
-                let chain_roots_info = chain_service.get_roots_info_by_slot(chain_last_slot).unwrap();
+                let chain_roots_info = chain_service.get_roots_info_by_slot(tmp_slot).unwrap();
                 // todo tmp del
-                // if chain_roots_info.merkle_tree_root.to_vec() != local_mt_root {
-                //     error!("local merkle tree is different to the tree on chain");
-                //     break Err(NodeError::new(generate_uuid(), "local merkle tree is different to the tree on chain".to_string()));
-                // }
+                if chain_roots_info.merkle_tree_root.to_vec() != local_mt_root {
+                    error!("local merkle tree is different to the tree on chain, chain merkle tree root: {:?}, local root: {:?}", chain_roots_info.merkle_tree_root.to_vec(), local_mt_root);
+                    return  Err(NodeError::new(
+                        generate_uuid(), 
+                        "local merkle tree is different to the tree on chain".to_string()
+                    ));
+                }
     
-                let _ = bridge_txs.iter_mut().map(| bt| {
-                    let proof = local_tree.merkle_proof_hash(hex::decode(bt.clone().tx_info_hash).unwrap()).unwrap();
+                info!("dong monitor: 11 bridge_txs: {:?}", bridge_txs);
+                let _ = bridge_txs.iter_mut().for_each(| bt| {
+                    //let proof = local_tree.merkle_proof_hash(bt.clone().tx_info_hash).unwrap();
+                    let proof = local_tree.merkle_proof_index(local_tree_leaf_num).unwrap();
                     bt.proof = hex::encode(proof.get_pairing_hashes());
+                    bt.is_generated_proof = true;
+                    bt.current_mt_root = local_mt_root.clone();
+                    local_tree_leaf_num += 1;
                 });
     
-                for bt in bridge_txs {
-                    execute_service.bridge_tx_update(bt).unwrap();
-                }
+                info!("dong monitor: 22 bridge_txs: {:?}", bridge_txs);
+                
+                let _ = bridge_txs.iter().for_each(|bt| {
+                    info!("updata tx: {:?}", bt.clone());
+                    execute_service.bridge_tx_update(bt.clone()).unwrap();
+                });
+                last_has_proof_tx_slot = tmp_slot as i64;
+                tmp_start_slot = tmp_slot as i64;
             }
-
-            execute_service.update_last_slot_for_monitor(chain_last_slot as i64);
+            //execute_service.update_last_slot_to_rkdb_for_monitor(chain_last_slot as i64);
         }
     }
 }

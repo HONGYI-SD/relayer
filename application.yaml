@@ -16,4 +16,5 @@ chain:
   #  keypair base58 string
   execute_keypair: ""
   l1_root_mgr_program_id: "G7i5mhVgDrmt5X4FWRR1jshkky7q9HxRpwWGjPyD4ymA"
-  l1_slots_account_pubkey: "62NpAXRsec9NiCdeSCWHQSwhoGNC3FaJo37G1An1UorM"
+  l1_slots_account_pubkey: "EtH7GnXRJaLiZQDCdJzNafLQx58Pbt3txGsxoHUEjub4"
+  #"62NpAXRsec9NiCdeSCWHQSwhoGNC3FaJo37G1An1UorM"
