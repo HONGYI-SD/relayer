@@ -48,10 +48,10 @@ impl ExecuteService {
         let l2_message_fund_account_pubkey = contract.l2_message_fund_account_pubkey.clone();
         let system_program_id = contract.system_program_id.clone();
         if is_filter {
-            let slot_dir = Path::new("./relayer/slot");
+            let slot_dir = Path::new("./relayer/filter/slot");
             let slot_db = DB::open_default(slot_dir).unwrap();
             let rocksdb = Arc::new(RwLock::new(slot_db));
-            let monitor_slot_dir = Path::new("./relayer/monitor-slot-tmp");
+            let monitor_slot_dir = Path::new("./relayer/filter/monitor-slot-tmp");
             let monitor_slot_db = DB::open_default(monitor_slot_dir).unwrap();
             let monitor_rocksdb_slot = Arc::new(RwLock::new(monitor_slot_db));
             info!("Created PostgresClient.");
@@ -67,11 +67,11 @@ impl ExecuteService {
                 initial_slot: 2,
             })
         }else {
-            let slot_dir = Path::new("./relayer/slot-tmp");
+            let slot_dir = Path::new("./relayer/monitor/slot-tmp");
             let slot_db = DB::open_default(slot_dir).unwrap();
             let rocksdb = Arc::new(RwLock::new(slot_db));
 
-            let monitor_slot_dir = Path::new("./relayer/monitor-slot");
+            let monitor_slot_dir = Path::new("./relayer/monitor/monitor-slot");
             let monitor_slot_db = DB::open_default(monitor_slot_dir).unwrap();
             let monitor_rocksdb_slot = Arc::new(RwLock::new(monitor_slot_db));
             info!("Created PostgresClient.");

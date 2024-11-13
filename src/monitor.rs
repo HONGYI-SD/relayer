@@ -70,8 +70,10 @@ impl Monitor {
         let local_tree = self.local_tree.as_mut().unwrap();
 
         let local_last_slot = execute_service.get_last_slot_for_monitor().unwrap();
+        info!("dong: local_last_slot: {}", local_last_slot);
         if local_last_slot > 0 {
             let old_hashes = execute_service.brige_txs_hashes(0, local_last_slot).unwrap();
+            info!("dong: old_hashes {:?}", old_hashes);
             let _ = local_tree.add_hashes(old_hashes);
         }
         
@@ -82,8 +84,10 @@ impl Monitor {
                 info!("there is no slots info on chain, waitting...");
                 continue;
             }
+            info!("dong: chain_all_slots: {:?}", chain_all_slots);
             let chain_last_slot = chain_all_slots[chain_all_slots.len() - 1];
-
+            info!("dong: local_last_slot: {}, chain_last_slot: {}", local_last_slot, chain_last_slot);
+            
             if !(chain_last_slot > local_last_slot as u64) {
                 info!("there is no slot update on chain. local last slot: {:?}, chain last slot: {:?}", local_last_slot.clone(),chain_last_slot.clone());
                 time_util::sleep_seconds(1);
@@ -93,7 +97,8 @@ impl Monitor {
             {
                 let mut bridge_txs = execute_service.bridge_tx_range(local_last_slot, chain_last_slot as i64).unwrap();
                 let bridge_txs_hashes: Vec<_>= bridge_txs.clone().into_iter().map(|bt| {bt.tx_info_hash}).collect();
-                let _ = local_tree.add_hashes(bridge_txs_hashes.into_iter().map(|str_hash| hex::decode(str_hash).expect("failed to decode hex string")).collect());
+                info!("dong: bridge_txs_hashes {:?}", bridge_txs_hashes);
+                let _ = local_tree.add_hashes(bridge_txs_hashes);
                 
                 let _ = local_tree.merklize();
     

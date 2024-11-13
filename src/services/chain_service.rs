@@ -183,7 +183,7 @@ impl ChainService {
         };
 
         let all_slots = chain_root_mgr_service.fetch_all_slots()?;
-        info!("all slots: {:?}", all_slots);
+        //info!("all slots: {:?}", all_slots);
 
         Some(all_slots)
         // if all_slots.len() != 0 {
