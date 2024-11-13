@@ -46,6 +46,14 @@ pub struct BridgeTxRow {
     #[diesel(column_name = column_proof)]
     pub proof: String,
 
+    #[diesel(sql_type = Bool)]
+    #[diesel(column_name = column_is_generated_proof)]
+    pub is_generated_proof: bool,
+
+    #[diesel(sql_type = Bytea)]
+    #[diesel(column_name = column_current_mt_root)]
+    pub current_mt_root: Vec<u8>,
+
     #[diesel(sql_type = Timestamp)]
     #[diesel(column_name = column_updated_on)]
     pub updated_on: chrono::NaiveDateTime,
@@ -69,26 +77,38 @@ pub struct BridgeTxRecord {
     #[diesel(sql_type = Varchar)]
     #[diesel(column_name = column_proof)]
     pub proof: String,
+
+    #[diesel(sql_type = Bool)]
+    #[diesel(column_name = column_is_generated_proof)]
+    pub is_generated_proof: bool,
+
+    #[diesel(sql_type = Bytea)]
+    #[diesel(column_name = column_current_mt_root)]
+    pub current_mt_root: Vec<u8>,
 }
 
-impl From<&TransactionRow> for BridgeTxRecord {
-    fn from(tr: &TransactionRow) -> Self {
-        BridgeTxRecord { 
-            slot: tr.slot, 
-            signature: "todo signature".to_string(), //todo tr.signatures[0].as_slice(), 
-            tx_info_hash: "todo tx hash".as_bytes().to_vec(),  //todo, compute bridge tx hash
-            proof: "tx proof".to_string() // todo
-        }
-    }
-}
+// impl From<&TransactionRow> for BridgeTxRecord {
+//     fn from(tr: &TransactionRow) -> Self {
+//         BridgeTxRecord { 
+//             slot: tr.slot, 
+//             signature: "todo signature".to_string(),
+//             tx_info_hash: "todo tx hash".as_bytes().to_vec(),
+//             proof: "tx proof".to_string(),
+//             is_generated_proof: false,
+//             current_mt_root:
+//         }
+//     }
+// }
 
 impl From<BridgeTxRow> for BridgeTxRecord {
     fn from(btr: BridgeTxRow) -> Self {
         BridgeTxRecord { 
             slot: btr.slot, 
-            signature: "todo signature".to_string(), // todo 
-            tx_info_hash: "todo tx hash".as_bytes().to_vec(), // todo 
-            proof: "todo tx proof".to_string()  // todo
+            signature: btr.signature,
+            tx_info_hash: btr.tx_info_hash,
+            proof: btr.proof,
+            is_generated_proof: btr.is_generated_proof,
+            current_mt_root: btr.current_mt_root
         }
     }
     

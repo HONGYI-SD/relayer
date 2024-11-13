@@ -18,6 +18,12 @@ diesel::table! {
         #[sql_name = "proof"]
         column_proof -> VarChar,
 
+        #[sql_name = "is_generated_proof"]
+        column_is_generated_proof -> Bool,
+
+        #[sql_name = "current_mt_root"]
+        column_current_mt_root -> Bytea,
+
         #[sql_name = "updated_on"]
         column_updated_on -> Timestamp,
     }

@@ -13,9 +13,11 @@
 CREATE TABLE bridge_transaction
 (
     id         bigserial PRIMARY KEY,
-    slot       BIGINT    UNIQUE NOT NULL,
-    signature  VARCHAR(256) DEFAULT '',
+    slot       BIGINT    NOT NULL,
+    signature  VARCHAR(256) UNIQUE DEFAULT '',
     tx_info_hash     BYTEA     NOT NULL,
     proof  VARCHAR(256) DEFAULT '',
+    is_generated_proof BOOLEAN NOT NULL, 
+    current_mt_root BYTEA,
     updated_on TIMESTAMP default current_timestamp
 )

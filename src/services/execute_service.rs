@@ -20,6 +20,7 @@ use rocksdb::DB;
 use solana_clap_utils::nonce;
 use solana_sdk::pubkey::{self, Pubkey};
 use solana_sdk::signature::Signature;
+use std::default;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
@@ -258,6 +259,8 @@ impl ExecuteService {
             signature: sig.to_string(),
             tx_info_hash: tx_info_hash.into(),
             proof: "".to_string(),
+            is_generated_proof: false,
+            current_mt_root: vec![],
         })
     }
     pub fn insert_bridge_txs(&self, bridge_txs: Vec<BridgeTxRecord>) -> Result<u32, NodeError> {
