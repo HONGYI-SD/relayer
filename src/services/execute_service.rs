@@ -27,7 +27,7 @@ use std::sync::{Arc, RwLock};
 
 pub struct ExecuteService {
     client_pool: PgConnectionPool,
-    client_one: Client,
+    client_one: Option<Client>,
     l2_msg_program_id: String,
     l2_message_fund_account_pubkey: String,
     system_program_id: String,
@@ -43,12 +43,13 @@ impl ExecuteService {
             10,
         );
 
-        let one = create_one(config.to_owned());
+        
 
         let l2_msg_program_id = contract.l2_message_program_id.clone();
         let l2_message_fund_account_pubkey = contract.l2_message_fund_account_pubkey.clone();
         let system_program_id = contract.system_program_id.clone();
         if is_filter {
+            let one = create_one(config.to_owned());
             let slot_dir = Path::new("./relayer/filter/slot");
             let slot_db = DB::open_default(slot_dir).unwrap();
             let rocksdb = Arc::new(RwLock::new(slot_db));
@@ -59,7 +60,7 @@ impl ExecuteService {
 
             Ok(Self {
                 client_pool: pool,
-                client_one: one,
+                client_one: Some(one),
                 l2_msg_program_id,
                 l2_message_fund_account_pubkey,
                 system_program_id,
@@ -79,7 +80,7 @@ impl ExecuteService {
 
             Ok(Self {
                 client_pool: pool,
-                client_one: one,
+                client_one: None,
                 l2_msg_program_id,
                 l2_message_fund_account_pubkey,
                 system_program_id,
@@ -100,7 +101,8 @@ impl ExecuteService {
     }
 
     pub fn get_transactions(&mut self, from_slot: i64, to_slot: i64) -> Result<Vec<TransactionRow>, NodeError> {
-        let mut repo = TransactionRepo { one: &mut self.client_one };
+        //let client = self.client_one.as_mut().unwrap();
+        let mut repo = TransactionRepo { one: self.client_one.as_mut().unwrap() };
 
         let rows = repo.range(from_slot, to_slot)?;
         Ok(rows)
@@ -146,7 +148,7 @@ impl ExecuteService {
     }
 
     pub fn get_max_slot(&mut self) -> Result<i64, NodeError> {
-        let mut repo = BlockRepo { one: &mut self.client_one };
+        let mut repo = BlockRepo { one: self.client_one.as_mut().unwrap() };
 
         match repo.show() {
             Ok(row) => {
