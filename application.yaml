@@ -1,20 +1,19 @@
 store:
-  host: "52.77.241.74"
+  host: "127.0.0.1"
   port: 5432
   username: "solana"
   password: "1111"
   schema: "solana"
 
 contract:
-  l2_message_program_id: "8TDycJBTEsyWV2w7vQnTmrePBaHHJDdDxxV3vekir2gC"
-  l2_message_fund_account_pubkey: "H5NTzx4cSD5QAymrSN3CeRqLrmUqfkoSMhphvgZKp4A3"
+  l2_message_program_id: ""
+  l2_message_fund_account_pubkey: ""
   system_program_id: "11111111111111111111111111111111"
 
 chain:
-  url: "http://52.77.241.74:8899"
+  url: "http://127.0.0.1:8899"
   fraud_proof_native_program_id: ""
   #  keypair base58 string
   execute_keypair: ""
-  l1_root_mgr_program_id: "G7i5mhVgDrmt5X4FWRR1jshkky7q9HxRpwWGjPyD4ymA"
-  l1_slots_account_pubkey: "EtH7GnXRJaLiZQDCdJzNafLQx58Pbt3txGsxoHUEjub4"
-  #"62NpAXRsec9NiCdeSCWHQSwhoGNC3FaJo37G1An1UorM"
+  l1_root_mgr_program_id: ""
+  l1_slots_account_pubkey: ""

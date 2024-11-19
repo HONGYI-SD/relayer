@@ -1,7 +1,7 @@
 {
-  "host": "52.77.241.74",
+  "host": "127.0.0.1",
   "user": "solana",
   "password": "1111",
-  "dbname": "solana",
+  "dbname": "validator",
   "port": 5432
 }
