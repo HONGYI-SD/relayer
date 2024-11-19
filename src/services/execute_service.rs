@@ -169,7 +169,7 @@ impl ExecuteService {
     }
 
     pub fn get_max_slot(&mut self) -> Result<i64, NodeError> {
-        let mut repo = BlockRepo { one: self.client_one.as_mut().unwrap() };
+        let mut repo = BlockRepo { pool: Box::from(self.client_pool.to_owned()) };
 
         match repo.show() {
             Ok(row) => {
