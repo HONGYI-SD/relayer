@@ -70,14 +70,21 @@ impl Monitor {
         let local_tree = self.local_tree.as_mut().unwrap();
         let mut local_tree_leaf_num = 0;
 
-        let mut last_has_proof_tx_slot: i64 = 0;
+        // get earliest no proof bridge tx
+        let mut earliest_no_proof_tx_slot: i64 = 0;
+        if let Ok(earliest_no_proof_tx) = execute_service.get_ealiest_no_proof_bridge_tx_from_pg_for_monitor() {
+            earliest_no_proof_tx_slot = earliest_no_proof_tx.slot;
+        }
+        info!("dong: earliest no proof tx slot: {}", earliest_no_proof_tx_slot);
+
+        let mut max_has_proof_tx_slot: i64 = 0;
         if let Ok(last_has_proof_tx) = execute_service.get_last_has_proof_bridge_tx_from_pg_for_monitor() {
-            last_has_proof_tx_slot = last_has_proof_tx.slot;
+            max_has_proof_tx_slot = last_has_proof_tx.slot;
         }
         //let last_has_proof_tx_slot = execute_service.get_last_slot_from_rkdb_for_monitor().unwrap();
-        info!("dong: local_last_slot: {}", last_has_proof_tx_slot);
-        if last_has_proof_tx_slot > 0 {
-            let old_hashes = execute_service.brige_txs_hashes(0, last_has_proof_tx_slot).unwrap();
+        info!("dong: local_last_slot: {}", max_has_proof_tx_slot);
+        if max_has_proof_tx_slot > 0 {
+            let old_hashes = execute_service.brige_txs_hashes(0, max_has_proof_tx_slot).unwrap();
             if old_hashes.len() != 0 {
                 local_tree_leaf_num = old_hashes.len() - 1;
             }
@@ -98,16 +105,16 @@ impl Monitor {
             }
             info!("dong: chain_all_slots: {:?}", chain_all_slots);
             let chain_last_slot = chain_all_slots[chain_all_slots.len() - 1];
-            info!("dong: local_last_slot: {}, chain_last_slot: {}", last_has_proof_tx_slot, chain_last_slot);
+            info!("dong: local_last_slot: {}, chain_last_slot: {}", max_has_proof_tx_slot, chain_last_slot);
 
-            if !(chain_last_slot > last_has_proof_tx_slot as u64) {
-                info!("there is no slot update on chain. local last slot: {:?}, chain last slot: {:?}", last_has_proof_tx_slot.clone(),chain_last_slot.clone());
+            if !(chain_last_slot > max_has_proof_tx_slot as u64) {
+                info!("there is no slot update on chain. local last slot: {:?}, chain last slot: {:?}", max_has_proof_tx_slot.clone(),chain_last_slot.clone());
                 time_util::sleep_seconds(1);
                 continue;
             }
             
-            let chain_sub_slots: Vec<u64> = chain_all_slots.iter().filter(|&&s| s > last_has_proof_tx_slot as u64).cloned().collect();
-            let mut tmp_start_slot = last_has_proof_tx_slot;
+            let chain_sub_slots: Vec<u64> = chain_all_slots.iter().filter(|&&s| s > max_has_proof_tx_slot as u64).cloned().collect();
+            let mut tmp_start_slot = max_has_proof_tx_slot;
             for tmp_slot in chain_sub_slots {
                 let mut bridge_txs = execute_service.bridge_tx_range(tmp_start_slot, tmp_slot as i64).unwrap();
                 let bridge_txs_hashes: Vec<Vec<u8>>= bridge_txs.clone().into_iter().map(|bt| {bt.tx_info_hash}).collect();
@@ -143,7 +150,7 @@ impl Monitor {
                     info!("updata tx: {:?}", bt.clone());
                     execute_service.bridge_tx_update(bt.clone()).unwrap();
                 });
-                last_has_proof_tx_slot = tmp_slot as i64;
+                max_has_proof_tx_slot = tmp_slot as i64;
                 tmp_start_slot = tmp_slot as i64;
             }
             //execute_service.update_last_slot_to_rkdb_for_monitor(chain_last_slot as i64);

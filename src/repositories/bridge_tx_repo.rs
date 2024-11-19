@@ -35,26 +35,54 @@ impl BridgeTxRepo {
         Ok(row)
     }
 
-    pub fn get_last_bridge_tx_has_proof(&self) -> Result<BridgeTxRow, NodeError> {
+    pub fn get_earliest_no_proof_bridge_tx(&self) -> Result<BridgeTxRow, NodeError> {
         let conn: &mut PooledPgConnection = &mut self.pool.get()?;
 
-        let results = table_bridge_transaction
-        .order(column_slot.desc())
-        .filter(column_is_generated_proof.eq(true))
-        .limit(1)
-        .load::<BridgeTxRow>(conn)
-        .expect("Error loading chain");
+        if let Ok(results) = table_bridge_transaction
+            .order(column_slot.asc())
+            .filter(column_is_generated_proof.eq(false))
+            .limit(1)
+            .load::<BridgeTxRow>(conn) {
 
-        if results.is_empty() {
-            return Err(
-                NodeError::new(generate_uuid(), 
-                "Couldn`t find query last_bridge_tx_has_proof from database".to_string()
-                )
-            );
+                if results.is_empty() {
+                    return Err(
+                        NodeError::new(generate_uuid(), 
+                        "Couldn`t find query last_bridge_tx_has_proof from database".to_string()
+                        )
+                    );
+                }
+        
+                let row = results[0].clone();
+                return Ok(row);
         }
 
-        let row = results[0].clone();
-        Ok(row)
+        return Err(NodeError::new(generate_uuid(), 
+        "there is not exist bridge tx in pg".to_string()));
+    }
+
+    pub fn get_last_has_proof_bridge_tx(&self) -> Result<BridgeTxRow, NodeError> {
+        let conn: &mut PooledPgConnection = &mut self.pool.get()?;
+
+        if let Ok(results) = table_bridge_transaction
+            .order(column_slot.desc())
+            .filter(column_is_generated_proof.eq(true))
+            .limit(1)
+            .load::<BridgeTxRow>(conn) {
+
+                if results.is_empty() {
+                    return Err(
+                        NodeError::new(generate_uuid(), 
+                        "Couldn`t find query last_bridge_tx_has_proof from database".to_string()
+                        )
+                    );
+                }
+        
+                let row = results[0].clone();
+                return Ok(row);
+        }
+
+        return Err(NodeError::new(generate_uuid(), 
+        "there is not exist bridge tx in pg".to_string()));
     }
 
     pub fn insert(&self, records: Vec<BridgeTxRecord>) -> Result<Vec<BridgeTxRow>, NodeError> {

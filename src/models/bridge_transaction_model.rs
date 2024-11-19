@@ -119,6 +119,7 @@ pub struct BridgeTxInfo {
     pub from: Pubkey,
     pub to: Pubkey,
     pub amount: u64,
+    pub bridge_tx_index: u64,
     pub message_type: MessageType,
 }
 
@@ -128,6 +129,7 @@ impl BridgeTxInfo {
             from,
             to,
             amount,
+            bridge_tx_index: 0,
             message_type,
         }
     }
@@ -136,6 +138,7 @@ impl BridgeTxInfo {
         bytes.extend_from_slice(&self.from.to_bytes());
         bytes.extend_from_slice(&self.to.to_bytes());
         bytes.extend_from_slice(&self.amount.to_le_bytes());
+        bytes.extend_from_slice(&self.bridge_tx_index.to_le_bytes());
         bytes.extend_from_slice(&self.message_type.to_bytes());
         bytes
     }

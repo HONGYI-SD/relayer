@@ -12,6 +12,7 @@ use crate::repositories::brief_repo::BriefRepo;
 use crate::repositories::chain_repo::ChainRepo;
 use crate::repositories::transaction_repo::TransactionRepo;
 use crate::utils::store_util::{create_one, create_pool, PgConnectionPool};
+use crate::utils::time_util;
 use crate::utils::uuid_util::generate_uuid;
 use borsh::BorshDeserialize;
 use log::{error, info};
@@ -34,6 +35,7 @@ pub struct ExecuteService {
     rocksdb: Arc<RwLock<DB>>,
     monitor_rocksdb_slot: Arc<RwLock<DB>>,
     initial_slot: u64,
+    bridge_tx_index: u64,
 }
 
 impl ExecuteService {
@@ -67,6 +69,7 @@ impl ExecuteService {
                 rocksdb,
                 monitor_rocksdb_slot,
                 initial_slot: 2,
+                bridge_tx_index: 0,
             })
         }else {
             let slot_dir = Path::new("./relayer/monitor/slot-tmp");
@@ -87,6 +90,7 @@ impl ExecuteService {
                 rocksdb,
                 monitor_rocksdb_slot,
                 initial_slot: 2,
+                bridge_tx_index: 0,
             })
         }
         
@@ -128,11 +132,28 @@ impl ExecuteService {
         Ok(slot)
     }
 
+    pub fn get_ealiest_no_proof_bridge_tx_from_pg_for_monitor(&self) -> Result<BridgeTxRecord, NodeError>{
+        let repo = BridgeTxRepo{ pool: Box::from(self.client_pool.to_owned()) };
+        loop {
+            match repo.get_earliest_no_proof_bridge_tx() {
+                Ok(tx_raw) => {
+                    return Ok(BridgeTxRecord::from(tx_raw));
+                }
+                Err(_err) => {
+                    time_util::sleep_seconds(1);
+                    info!("There is no bridge tx");
+                    continue;
+                }
+            }
+        }
+
+    }
+
     pub fn get_last_has_proof_bridge_tx_from_pg_for_monitor(&self) -> Result<BridgeTxRecord, NodeError>{
         let repo = BridgeTxRepo{ pool: Box::from(self.client_pool.to_owned()) };
-        match repo.get_last_bridge_tx_has_proof() {
+        match repo.get_last_has_proof_bridge_tx() {
             Ok(tx_raw) => {
-                Ok(BridgeTxRecord::from(tx_raw))
+                return Ok(BridgeTxRecord::from(tx_raw));
             }
             Err(err) => {
                 Err(err)
@@ -230,7 +251,7 @@ impl ExecuteService {
         return false;
     }
 
-    pub fn txraw_to_bridgetx(&self, tx: &TransactionRow, pubkeys: &Vec<Pubkey>) -> Option<BridgeTxRecord> {
+    pub fn txraw_to_bridgetx(&mut self, tx: &TransactionRow, pubkeys: &Vec<Pubkey>) -> Option<BridgeTxRecord> {
         if tx.meta.inner_instructions.as_ref().unwrap().len() == 0 {
             return None;
         }
@@ -258,13 +279,15 @@ impl ExecuteService {
         // ix_data[start..data_len] is transfer amount
         let start = data_len - 8; 
         let amount = u64::from_le_bytes(ix_data[start..data_len].try_into().unwrap());
-
+        info!("dong: bridge tx index: {}", self.bridge_tx_index);
         let bridge_tx_info = BridgeTxInfo{
             from: from_account,
             to: from_account, // from and to si same account
             amount,
+            bridge_tx_index: self.bridge_tx_index,
             message_type: MessageType::Native,
         };
+        self.bridge_tx_index +=  1;
         let tx_info_hash = bridge_tx_info.double_hash_array();
         info!("dong: tx_info_hash {:?}", tx_info_hash);
         let sig = Signature::try_from(tx.signatures[0].clone()).unwrap();
