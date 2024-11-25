@@ -19,5 +19,6 @@ CREATE TABLE bridge_transaction
     proof  VARCHAR(256) DEFAULT '',
     is_generated_proof BOOLEAN NOT NULL, 
     current_mt_root BYTEA,
+    root_program_slot BIGINT DEFAULT 0,
     updated_on TIMESTAMP default current_timestamp
 )

@@ -54,6 +54,10 @@ pub struct BridgeTxRow {
     #[diesel(column_name = column_current_mt_root)]
     pub current_mt_root: Vec<u8>,
 
+    #[diesel(sql_type = Int8)]
+    #[diesel(column_name = column_root_program_slot)]
+    pub root_program_slot: i64,
+
     #[diesel(sql_type = Timestamp)]
     #[diesel(column_name = column_updated_on)]
     pub updated_on: chrono::NaiveDateTime,
@@ -82,6 +86,10 @@ pub struct BridgeTxRecord {
     #[diesel(column_name = column_is_generated_proof)]
     pub is_generated_proof: bool,
 
+    #[diesel(sql_type = Int8)]
+    #[diesel(column_name = column_root_program_slot)]
+    pub root_program_slot: i64,
+
     #[diesel(sql_type = Bytea)]
     #[diesel(column_name = column_current_mt_root)]
     pub current_mt_root: Vec<u8>,
@@ -108,6 +116,7 @@ impl From<BridgeTxRow> for BridgeTxRecord {
             tx_info_hash: btr.tx_info_hash,
             proof: btr.proof,
             is_generated_proof: btr.is_generated_proof,
+            root_program_slot: 0 as i64,
             current_mt_root: btr.current_mt_root
         }
     }

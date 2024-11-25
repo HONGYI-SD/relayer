@@ -298,6 +298,7 @@ impl ExecuteService {
             tx_info_hash: tx_info_hash.into(),
             proof: "".to_string(),
             is_generated_proof: false,
+            root_program_slot: 0 as i64,
             current_mt_root: vec![],
         })
     }

@@ -141,6 +141,7 @@ impl Monitor {
                     bt.proof = hex::encode(proof.get_pairing_hashes());
                     bt.is_generated_proof = true;
                     bt.current_mt_root = local_mt_root.clone();
+                    bt.root_program_slot = tmp_slot as i64;
                     local_tree_leaf_num += 1;
                 });
     
