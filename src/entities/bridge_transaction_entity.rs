@@ -24,7 +24,7 @@ diesel::table! {
         #[sql_name = "current_mt_root"]
         column_current_mt_root -> Bytea,
 
-        #[sql_name = "column_root_program_slot"]
+        #[sql_name = "root_program_slot"]
         column_root_program_slot -> Int8,
 
         #[sql_name = "updated_on"]
